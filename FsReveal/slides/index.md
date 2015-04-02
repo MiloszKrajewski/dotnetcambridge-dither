@@ -108,9 +108,9 @@ If you like those features in C#:
 - Generics
 - Nullables
 - Iterators (`yield`)
-- Implicit types (`var`)
+- Implicit types and type inference (`var` and `X<T>`)
 - Lambda function
-- Asynchronous (`async`/`await`)
+- Asynchronous (`async` and `await`)
 - Linq / extension methods
 
 F# is for you.
@@ -252,10 +252,10 @@ What would this code print?
 
     [lang=fs]
     let mutable (x, y) = 0, 1
-    for i = 0 to 7 do
-        x <- x + y
-        y <- y * 2
-    printfn "%d" x
+    for i = 1 to 8 do
+       x <- x + 1
+       y <- y * 2
+    printfn "%d,%d" x y
 
 ---
 
@@ -263,10 +263,10 @@ And this one?
 
     [lang=cs]
     int x = 0, y = 1;
-    for (var i = 0; i <= 7; ++i)
-        x = x + y;
-        y = y * 2;
-    Console.WriteLine("{0}", x);
+    for (var i = 1; i <= 8; ++i)
+       x = x + 1;
+       y = y * 2;
+    Console.WriteLine("{0},{1}", x, y);
 
 ***
 
@@ -681,14 +681,14 @@ Let's consider a program to calculate a sum of given numbers:
 In F# you don't mutate result:
 
     [lang=fs]
-    let sum (values: double[]) = 
-        let rec partial index sumSoFar = 
-            match index, values.Length with
-            | i, l when i >= l -> sumSoFar
-            | i, _ -> partial (i + 1) (sumSoFar + values.[i])
-        partial values 0 0.0
+    let sum values = 
+       let rec partial sumSoFar list = 
+           match list with
+           | [] -> sumSoFar
+           | head :: tail -> partial (head + sumSoFar) tail 
+       partial 0.0 values
 
-    printfn "%g" (sum [| 1.0; 2.0; 3.0; 4.0 |])
+    printfn "%g" (sum [ 1.0; 2.0; 3.0; 4.0 ])
     
 you produce new result a pass it forward
 
@@ -878,142 +878,41 @@ properties-to-fields http://stackoverflow.com/questions/15454470/why-arent-simpl
 
 ***
 
-### Array.update
+### Dithering
 
-There is idiomatic `Array.get` and `Array.set`, but we'll need `Array.update`:
+> **Dither**: is an intentionally applied form of noise used to randomize quantization error, preventing large-scale patterns such as color banding in images.
 
-    module Array =
-        let update a i f = 
-            let v = Array.get a i // a[i]
-            let v' = f v
-            Array.set a i v'
-
-Let's move last arguments to from using forward pipe operator
-
-    let update a i f = 
-        let v = i |> Array.get a
-        let v' = v |> f
-        v' |> Array.set a i
-
-***
-
-### Reveal.js
-
-- A framework for easily creating beautiful presentations using HTML.
-
-
-> **Atwood's Law**: any application that can be written in JavaScript, will eventually be written in JavaScript.
-
-***
-
-### FSharp.Formatting
-
-- F# tools for generating documentation (Markdown processor and F# code formatter).
-- It parses markdown and F# script file and generates HTML or PDF.
-- Code syntax highlighting support.
-- It also evaluates your F# code and produce tooltips.
-
-***
-
-### Syntax Highlighting
-
-#### F# (with tooltips)
-
-    let a = 5
-    let factorial x = [1..x] |> List.reduce (*)
-    let c = factorial a
+(from [Wikipedia](http://en.wikipedia.org/wiki/Dither))
 
 ---
 
-#### C#
+#### Original
 
-    [lang=cs]
-    using System;
-
-    class Program
-    {
-        static void Main()
-        {
-            Console.WriteLine("Hello, world!");
-        }
-    }
+![Original](images/david-original.png)
 
 ---
 
-#### JavaScript
+#### Treshold
 
-    [lang=js]
-    function copyWithEvaluation(iElem, elem) {
-        return function (obj) {
-            var newObj = {};
-            for (var p in obj) {
-                var v = obj[p];
-                if (typeof v === "function") {
-                    v = v(iElem, elem);
-                }
-                newObj[p] = v;
-            }
-            if (!newObj.exactTiming) {
-                newObj.delay += exports._libraryDelay;
-            }
-            return newObj;
-        };
-    }
-
+![Treshold](images/david-treshold.png)
 
 ---
 
-#### Haskell
- 
-    [lang=haskell]
-    recur_count k = 1 : 1 : zipWith recurAdd (recur_count k) (tail (recur_count k))
-            where recurAdd x y = k * x + y
+#### Random
 
-    main = do
-      argv <- getArgs
-      inputFile <- openFile (head argv) ReadMode
-      line <- hGetLine inputFile
-      let [n,k] = map read (words line)
-      printf "%d\n" ((recur_count k) !! (n-1))
-
-*code from [NashFP/rosalind](https://github.com/NashFP/rosalind/blob/master/mark_wutka%2Bhaskell/FIB/fib_ziplist.hs)*
+![Random](images/david-random.png)
 
 ---
 
-### SQL
+#### Bayer
 
-    [lang=sql]
-    select *
-    from
-    (select 1 as Id union all select 2 union all select 3) as X
-    where Id in (@Ids1, @Ids2, @Ids3)
+![Bayer](images/david-bayer.png)
 
-*sql from [Dapper](https://code.google.com/p/dapper-dot-net/)*
+---
 
-***
+#### Floyd-Steinberg
 
-**Bayes' Rule in LaTeX**
-
-$ \Pr(A|B)=\frac{\Pr(B|A)\Pr(A)}{\Pr(B|A)\Pr(A)+\Pr(B|\neg A)\Pr(\neg A)} $
-
-***
-
-### The Reality of a Developer's Life 
-
-**When I show my boss that I've fixed a bug:**
-  
-![When I show my boss that I've fixed a bug](http://www.topito.com/wp-content/uploads/2013/01/code-07.gif)
-  
-**When your regular expression returns what you expect:**
-  
-![When your regular expression returns what you expect](http://www.topito.com/wp-content/uploads/2013/01/code-03.gif)
-  
-*from [The Reality of a Developer's Life - in GIFs, Of Course](http://server.dzone.com/articles/reality-developers-life-gifs)*
-
-
-
-
-
+![Floyd-Steinberg](images/david-floyd.png)
 
 ***
 
@@ -1170,3 +1069,10 @@ Used frequently with `IDisposable`
 Kevlin Henney - Seven Ineffective Coding Habits of Many Programmers
 https://vimeo.com/97329157
 
+***
+
+**Bayes' Rule in LaTeX**
+
+$ \Pr(A|B)=\frac{\Pr(B|A)\Pr(A)}{\Pr(B|A)\Pr(A)+\Pr(B|\neg A)\Pr(\neg A)} $
+
+***

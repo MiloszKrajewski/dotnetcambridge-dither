@@ -24,27 +24,6 @@ module Bitmap =
         let fileName' = Tools.resolvePath fileName
         Image.FromFile(fileName') |> enforceFormat
 
-    let private showForm (form: Form) = 
-        #if INTERACTIVE
-        form.Show()
-        #else
-        let thread = Thread(fun () -> Application.Run(form))
-        thread.IsBackground <- true
-        thread.Start()
-        #endif
-
-    let show title (img: Image) =
-        let form = new Form(TopMost = true, Text = title)
-        let viewer = 
-            new PictureBox(
-                Dock = DockStyle.Fill,
-                BackColor = Color.Red,
-                SizeMode = PictureBoxSizeMode.Zoom,
-                Image = img)
-        form.ClientSize <- img.Size
-        form.Controls.Add(viewer)
-        showForm form
-
     let lockBits (lockMode: ImageLockMode) (func: BitmapData -> 'a) (bitmap: Bitmap) =
         let width, height = bitmap.Width, bitmap.Height
         let rect = Rectangle(0, 0, width, height)

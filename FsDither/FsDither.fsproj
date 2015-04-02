@@ -55,6 +55,7 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="Tools.fs" />
+    <Compile Include="UI.fs" />
     <Compile Include="Bitmap.fs" />
     <Compile Include="Data.fs" />
     <Compile Include="Pixel.fs" />

@@ -47,4 +47,7 @@ module Picture =
         fileName |> Bitmap.load |> fromBitmap
 
     let show title picture = 
-        picture |> toBitmap |> Bitmap.show title
+        picture |> toBitmap |> UI.show title
+
+    let slideShow title pictures =
+        pictures |> Seq.map toBitmap |> UI.slideShow title

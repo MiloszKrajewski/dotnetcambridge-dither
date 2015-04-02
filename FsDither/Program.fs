@@ -6,9 +6,7 @@ open System.Collections.Generic
 module Program = 
     [<EntryPoint>]
     let main argv = 
-        let image = "flowers-large.jpg" |> Bitmap.load
-
-        let greyscale = image |> Picture.fromBitmap |> Matrix.pmap Pixel.getL
+        let image = "flowers-large.jpg" |> Bitmap.load |> Picture.fromBitmap
 
 //        using (new StreamWriter("d:\\temp.txt")) (fun writer -> 
 //            greyscale
@@ -27,13 +25,25 @@ module Program =
 //        |> timeit "pfloyd" (PFloydSteinberg.processLayer (Value.quantize 2))
 //        |> ignore
 
-        greyscale
-        |> Matrix.pmap PintFloydSteinberg.fromFloat
-        |> timeit "pintfloyd" (PintFloydSteinberg.processLayer 2)
-        |> Matrix.pmap (PintFloydSteinberg.toFloat >> Pixel.fromL)
-        |> Picture.toBitmap
-        |> Bitmap.show "PintFloyded!"
-        |> ignore
+        seq {
+            yield image 
+            let greyscale = image |> Matrix.pmap Pixel.getL
+            yield greyscale |> Matrix.pmap Pixel.fromL
+            let dithered = 
+                greyscale
+                |> Matrix.pmap PintFloydSteinberg.fromFloat
+                |> timeit "pintfloyd" (PintFloydSteinberg.processLayer 2)
+                |> Matrix.pmap (PintFloydSteinberg.toFloat >> Pixel.fromL)
+            yield dithered 
+        } 
+        |> Picture.slideShow "slideshow"
+
+//        greyscale
+//        |> Matrix.pmap PintFloydSteinberg.fromFloat
+//        |> timeit "pintfloyd" (PintFloydSteinberg.processLayer 2)
+//        |> Matrix.pmap (PintFloydSteinberg.toFloat >> Pixel.fromL)
+//        |> Picture.show "PintFloyded!"
+//        |> ignore
 
         // |> Matrix.pmap Pixel.fromL
         // |> Picture.toBitmap

@@ -11,13 +11,11 @@ module Tools =
     let root = "."
     #endif
 
-    let timeit name func value =
+    let timeit name func arg =
         let timer = Stopwatch.StartNew()
-        let result = func value
+        let result = func arg
         timer.Stop()
         printfn "%s: %f" name timer.Elapsed.TotalMilliseconds
         result
-
-    let inline timeit0 name func = timeit name func ()
 
     let resolvePath path = Path.Combine(root, path)
