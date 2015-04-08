@@ -13,6 +13,7 @@ module PintFloydSteinberg =
 
         let cx = Array.zeroCreate h
 
+        // integer quantizer
         let quantizerSteps = levels - 1
         let quantizerStepWidth = (0x10000 / quantizerSteps) >>> 1
         let inline quantize v = 
@@ -35,6 +36,7 @@ module PintFloydSteinberg =
                 output.[y, x] <- actual
                 expected - actual
 
+            // integer diffusor
             let inline diffuseError x error =
                 let error4 = error <<< 2
                 let inline div16round v = (v + 8) >>> 4

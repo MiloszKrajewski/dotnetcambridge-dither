@@ -17,7 +17,7 @@ module Picture =
             |> Matrix.setRow matrix row
 
         bitmap |> Bitmap.lockBits ImageLockMode.ReadOnly (fun data ->
-            ISeq.piter 0 (height - 1) (cloneRow data))
+            (0, height - 1) |> ISeq.piter (cloneRow data))
         matrix
 
     let toBitmap matrix =
@@ -30,7 +30,7 @@ module Picture =
             |> Bitmap.setPhysicalPixels data row
 
         bitmap |> Bitmap.lockBits ImageLockMode.WriteOnly (fun data ->
-            ISeq.piter 0 (height - 1) (cloneRow data))
+            (0, height - 1) |> ISeq.piter (cloneRow data))
         bitmap
 
     let split (picture: Pixel[,]) =
@@ -46,8 +46,8 @@ module Picture =
     let load fileName = 
         fileName |> Bitmap.load |> fromBitmap
 
-    let show title picture = 
-        picture |> toBitmap |> UI.show title
+    let showOne title picture = 
+        picture |> toBitmap |> UI.showOne title
 
-    let slideShow title pictures =
-        pictures |> Seq.map toBitmap |> UI.slideShow title
+    let showMany pictures =
+        pictures |> Seq.map (fun (t, p) -> t, p |> toBitmap) |> UI.showMany

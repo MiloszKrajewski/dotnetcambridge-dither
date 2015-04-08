@@ -26,17 +26,16 @@ module Program =
 //        |> ignore
 
         seq {
-            yield image 
             let greyscale = image |> Matrix.pmap Pixel.getL
-            yield greyscale |> Matrix.pmap Pixel.fromL
-            let dithered = 
+            yield "original", image 
+            yield "greyscale", greyscale |> Matrix.pmap Pixel.fromL
+            yield 
+                "floyd!",
                 greyscale
                 |> Matrix.pmap PintFloydSteinberg.fromFloat
                 |> timeit "pintfloyd" (PintFloydSteinberg.processLayer 2)
                 |> Matrix.pmap (PintFloydSteinberg.toFloat >> Pixel.fromL)
-            yield dithered 
-        } 
-        |> Picture.slideShow "slideshow"
+        } |> Picture.showMany
 
 //        greyscale
 //        |> Matrix.pmap PintFloydSteinberg.fromFloat

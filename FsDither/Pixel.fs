@@ -3,7 +3,7 @@
 module Value =
     type Value = float
 
-    let inline quantize n = 
+    let quantize n = 
         let q = 1.0 / float (n - 1) 
         fun v -> round (v / q) * q |> max 0.0 |> min 1.0
     let inline toByte v = (v |> min 1.0 |> max 0.0) * 255.0 |> int

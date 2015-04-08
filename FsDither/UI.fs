@@ -4,75 +4,64 @@ module UI =
     open System.Windows.Forms
     open System.Threading
     open System.Drawing
+    open System
 
-    let private showForm (factory: unit -> Form) = 
-        #if INTERACTIVE
-        let form = factory ()
-        form.Show()
-        #else
-        let thread = Thread(fun () -> 
-            let form = factory ()
-            Application.Run(form)
-        )
-        thread.IsBackground <- true
-        thread.Start()
-        #endif
+    type ViewerForm() as form =
+        inherit Form(TopMost = true)
 
-    let private adjustClientSize (form: Form) (clientSize: Size) =
-        let screenRect = Screen.FromControl(form).WorkingArea
-        let formMargin = Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
-        let maximumClientSize = Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
-
-        let ratioX = float maximumClientSize.Width / float clientSize.Width
-        let ratioY = float maximumClientSize.Height / float clientSize.Height
-        let ratio = min ratioX ratioY
-        let clientX = float clientSize.Width * ratio |> int
-        let clientY = float clientSize.Height * ratio |> int
-        let originX = (screenRect.Left + screenRect.Width - clientX - formMargin.Width) / 2
-        let originY = (screenRect.Top + screenRect.Height - clientY - formMargin.Height) / 2
-
-        form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
-
-    let private createForm title =
-        let form = new Form(TopMost = true, Text = title)
         let viewer = 
             new PictureBox(
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Fill, 
                 SizeMode = PictureBoxSizeMode.Zoom)
-        form.Controls.Add(viewer)
 
-        let load (image: Image) =
-            adjustClientSize form image.Size
+        do form.Controls.Add(viewer)
+
+        member form.LoadImage (title, image) = 
+            form.Text <- title
             viewer.Image <- image
+            form.AdjustSize image.Size
 
-        form, load
+        member form.NextImage =
+            form.KeyPress
+            |> Event.filter (fun e -> e.KeyChar = ' ')
+            |> Event.map (fun _ -> form)
 
-    let show title (image: Image) =
-        showForm (fun () -> 
-            let form, load = createForm title
-            load image
-            form
+        member private form.AdjustSize clientSize =
+            let screenRect = Screen.FromControl(form).WorkingArea
+            let formMargin = Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
+            let maximumClientSize = Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
+
+            let ratioX = float maximumClientSize.Width / float clientSize.Width
+            let ratioY = float maximumClientSize.Height / float clientSize.Height
+            let ratio = min ratioX ratioY
+            let clientX = float clientSize.Width * ratio |> int
+            let clientY = float clientSize.Height * ratio |> int
+            let originX = (screenRect.Left + screenRect.Width - clientX - formMargin.Width) / 2
+            let originY = (screenRect.Top + screenRect.Height - clientY - formMargin.Height) / 2
+
+            form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
+
+    let private show (setup: ViewerForm -> unit) =
+        let action () = 
+            let form = new ViewerForm()
+            setup form
+            Application.Run(form)
+        let thread = Thread(action, IsBackground = true)
+        thread.Start()
+
+    let showOne title image =
+        show (fun f ->
+            f.NextImage |> Event.add (fun _ -> f.Close())
+            f.LoadImage(title, image)
         )
 
-    let slideShow title (images: #Image seq) =
-        showForm (fun () -> 
-            let form, load = createForm title
-            let images = images.GetEnumerator()
-
-            let nextImage () =
+    let showMany (images: (string * #Image) seq) =
+        let images = images.GetEnumerator()
+        show (fun f ->
+            let nextImage () = 
                 match images.MoveNext() with
-                | true -> images.Current |> load
-                | _ -> form.Close()
-
-            form.KeyPress 
-            |> Event.filter (fun e -> e.KeyChar = ' ')
-            |> Event.add (fun _ -> nextImage ())
-
-            form.KeyPress
-            |> Event.filter (fun e -> e.KeyChar = char Keys.Escape)
-            |> Event.add (fun _ -> form.Close())
-
+                | true -> images.Current |> f.LoadImage
+                | _ -> f.Close()
+            f.NextImage |> Event.add (fun _ -> nextImage ())
             nextImage ()
-
-            form
         )

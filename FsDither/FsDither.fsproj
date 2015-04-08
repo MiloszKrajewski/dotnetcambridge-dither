@@ -88,9 +88,9 @@
     <None Include="Scripts\TypeInference.fsx" />
     <None Include="Scripts\LowCeremony.fsx" />
     <None Include="Scripts\Retry.fsx" />
+    <None Include="Scripts\Demo1.fsx" />
     <None Include="Scripts\load-references.fsx" />
     <None Include="Scripts\load-project.fsx" />
-    <None Include="Scripts\Demo1.fsx" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

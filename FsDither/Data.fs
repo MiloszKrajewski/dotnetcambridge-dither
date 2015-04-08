@@ -1,11 +1,5 @@
 ﻿namespace FsDither
 
-module Pair =
-    let swap (left : 'a byref) (right : 'a byref) =
-        let temp = left
-        left <- right
-        right <- temp
-
 module Triplet =
     let inline map f (a, b, c) = (f a, f b, f c)
     let inline reduce f (a, b, c) = a |> f b |> f c
@@ -14,16 +8,16 @@ module ISeq =
     open System
     open System.Threading.Tasks
 
-    let inline fold lo hi state func = 
+    let inline fold state func (lo, hi) = 
         let mutable s = state
         for i = lo to hi do s <- func i s
         s
 
-    let inline iter lo hi func = 
+    let inline iter func (lo, hi) = 
         for i = lo to hi do func i
 
-    let inline piter lo ho func =
-        Parallel.For(lo, ho + 1, Action<int>(func)) |> ignore
+    let inline piter func (lo, hi) =
+        Parallel.For(lo, hi + 1, Action<int>(func)) |> ignore
 
 module Seq =
     open FSharp.Collections.ParallelSeq
@@ -67,7 +61,7 @@ module Matrix =
         let result = zeroCreate height width
         let inline initPixel y x = result.[y, x] <- func y x
         let inline initRow row = for x = 0 to width - 1 do initPixel row x
-        ISeq.piter 0 (height - 1) initRow
+        (0, height - 1) |> ISeq.piter initRow
         result
 
     let pmap func matrix =
@@ -80,6 +74,3 @@ module Matrix =
         let inline processPixel y x = func y x matrix.[y, x]
         pinit height width processPixel
 
-    let save (writer: TextWriter) matrix =
-        matrix |> Array2D.iteri (fun y x v -> writer.WriteLine(sprintf "(%d,%d)=%A" y x v))
-        matrix
