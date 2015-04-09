@@ -24,34 +24,32 @@ module Seq =
 
     let inline piter f s = PSeq.iter f s
 
-module Matrix =
-    open System.IO
-
+module Matrix = // Array@d
     let inline widthOf matrix = Array2D.length2 matrix
     let inline heightOf matrix = Array2D.length1 matrix
     let inline sizeOf matrix = heightOf matrix, widthOf matrix
 
     let inline zeroCreate height width = Array2D.zeroCreate height width
 
-    let inline blitRowToArray (matrix: 'a[,]) row column (array: 'a[]) index length =
+    let inline blitRowToVector (matrix: 'a[,]) row column (array: 'a[]) index length =
         let inline clone i = array.[index + i] <- matrix.[row, column + i] 
         for i = 0 to length - 1 do clone i
 
-    let inline blitArrayToRow (array: 'a[]) index (matrix: 'a[,]) row column length =
-        let inline clone i = matrix.[row, column + i] <- array.[index + i]
+    let inline blitVectorToRow (vector: 'a[]) index (matrix: 'a[,]) row column length =
+        let inline clone i = matrix.[row, column + i] <- vector.[index + i]
         for i = 0 to length - 1 do clone i
 
-    let setRow matrix row vector =
+    let applyRow matrix row vector =
         let matrixWidth = matrix |> widthOf
         let vectorLength = vector |> Array.length
         let length = min matrixWidth vectorLength
-        let inline clone i = matrix.[row, i] <- vector.[i]
-        for i = 0 to length - 1 do clone i
+        blitVectorToRow vector 0 matrix row 0 length
 
-    let getRow matrix row =
+    let extractRow matrix row =
         let length = matrix |> widthOf
-        let inline clone i = matrix.[row, i]
-        Array.init length clone
+        let vector = Array.zeroCreate length
+        blitRowToVector matrix row 0 vector 0 length
+        vector
 
     let inline init height width func = Array2D.init height width func
     let inline map func matrix = Array2D.map func matrix

@@ -2,8 +2,6 @@
 
 open System.Drawing
 open System.Drawing.Imaging
-open System.Windows.Forms
-open System.Threading
 open System.Runtime.InteropServices
 
 module Bitmap =
@@ -21,8 +19,8 @@ module Bitmap =
             bitmap
 
     let load (fileName: string) = 
-        let fileName' = Tools.resolvePath fileName
-        Image.FromFile(fileName') |> enforceFormat
+        let fileName = Tools.resolvePath fileName
+        fileName |> Image.FromFile |> enforceFormat
 
     let lockBits (lockMode: ImageLockMode) (func: BitmapData -> 'a) (bitmap: Bitmap) =
         let width, height = bitmap.Width, bitmap.Height
@@ -37,6 +35,7 @@ module Bitmap =
         data.Scan0 + nativeint (data.Stride * line)
 
     let getPhysicalPixels (data: BitmapData) row =
+        assert (data.PixelFormat = bitmapFormat)
         let width = data.Width
         let buffer = Array.zeroCreate<int32> width
         let pointer = data |> physicalRowAddress row
@@ -44,5 +43,7 @@ module Bitmap =
         buffer
 
     let setPhysicalPixels (data: BitmapData) row (vector: int32[]) =
+        assert (data.PixelFormat = bitmapFormat)
+        assert (data.Width = vector.Length)
         let pointer = data |> physicalRowAddress row
         Marshal.Copy(vector, 0, pointer, vector.Length)

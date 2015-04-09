@@ -1,7 +1,7 @@
 ﻿namespace FsDither
 
-open System.Diagnostics
 open System.IO
+open System.Diagnostics
 
 [<AutoOpen>]
 module Tools =

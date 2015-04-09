@@ -9,29 +9,38 @@ module Picture =
 
     let fromBitmap (bitmap: Bitmap) =
         let width, height = bitmap.Width, bitmap.Height
-        let matrix = Array2D.zeroCreate height width
+        let matrix = Matrix.zeroCreate height width
 
         let inline cloneRow data row = 
             Bitmap.getPhysicalPixels data row
-            |> Array.map Pixel.toLogicalPixel
-            |> Matrix.setRow matrix row
+            |> Array.map Pixel.fromInt32
+            |> Matrix.applyRow matrix row
 
         bitmap |> Bitmap.lockBits ImageLockMode.ReadOnly (fun data ->
             (0, height - 1) |> ISeq.piter (cloneRow data))
         matrix
+
+    let load fileName = 
+        fileName |> Bitmap.load |> fromBitmap
 
     let toBitmap matrix =
         let height, width = matrix |> Matrix.sizeOf
         let bitmap = new Bitmap(width, height, Bitmap.bitmapFormat)
 
         let inline cloneRow data row = 
-            Matrix.getRow matrix row
-            |> Array.map Pixel.toPhysicalPixel
+            Matrix.extractRow matrix row
+            |> Array.map Pixel.toInt32
             |> Bitmap.setPhysicalPixels data row
 
         bitmap |> Bitmap.lockBits ImageLockMode.WriteOnly (fun data ->
             (0, height - 1) |> ISeq.piter (cloneRow data))
         bitmap
+
+    let showOne title picture = 
+        picture |> toBitmap |> UI.showOne title
+
+    let showMany pictures =
+        pictures |> Seq.map (fun (t, p) -> t, p |> toBitmap) |> UI.showMany
 
     let split (picture: Pixel[,]) =
         (Pixel.getR, Pixel.getG, Pixel.getB) 
@@ -42,12 +51,3 @@ module Picture =
         let height = layers |> Triplet.map Matrix.heightOf |> Triplet.reduce min
         let inline combine y x = Pixel(red.[y, x], green.[y, x], blue.[y, x])
         Matrix.pinit height width combine
-
-    let load fileName = 
-        fileName |> Bitmap.load |> fromBitmap
-
-    let showOne title picture = 
-        picture |> toBitmap |> UI.showOne title
-
-    let showMany pictures =
-        pictures |> Seq.map (fun (t, p) -> t, p |> toBitmap) |> UI.showMany

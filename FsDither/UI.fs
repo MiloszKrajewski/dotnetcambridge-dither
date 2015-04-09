@@ -1,10 +1,9 @@
 ﻿namespace FsDither
 
 module UI =
-    open System.Windows.Forms
-    open System.Threading
     open System.Drawing
-    open System
+    open System.Threading
+    open System.Windows.Forms
 
     type ViewerForm() as form =
         inherit Form(TopMost = true)
@@ -28,26 +27,31 @@ module UI =
 
         member private form.AdjustSize clientSize =
             let screenRect = Screen.FromControl(form).WorkingArea
-            let formMargin = Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
-            let maximumClientSize = Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
+            let formMargin = 
+                Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
+            let maximumClientSize = 
+                Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
 
             let ratioX = float maximumClientSize.Width / float clientSize.Width
             let ratioY = float maximumClientSize.Height / float clientSize.Height
             let ratio = min ratioX ratioY
-            let clientX = float clientSize.Width * ratio |> int
-            let clientY = float clientSize.Height * ratio |> int
+            let clientX = float clientSize.Width * ratio |> round |> int
+            let clientY = float clientSize.Height * ratio |> round |> int
             let originX = (screenRect.Left + screenRect.Width - clientX - formMargin.Width) / 2
             let originY = (screenRect.Top + screenRect.Height - clientY - formMargin.Height) / 2
 
             form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
 
+    #if INTERACTIVE
     let private show (setup: ViewerForm -> unit) =
-        let action () = 
-            let form = new ViewerForm()
-            setup form
-            Application.Run(form)
-        let thread = Thread(action, IsBackground = true)
-        thread.Start()
+        let inline apply func arg = func arg; arg
+        (new ViewerForm() |> apply setup).Show()
+    #else
+    let private show (setup: ViewerForm -> unit) =
+        let inline apply func arg = func arg; arg
+        let action () = Application.Run(new ViewerForm() |> apply setup)
+        Thread(action, IsBackground = true).Start()
+    #endif
 
     let showOne title image =
         show (fun f ->
