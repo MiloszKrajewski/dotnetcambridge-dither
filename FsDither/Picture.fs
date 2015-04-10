@@ -17,7 +17,7 @@ module Picture =
             |> Matrix.applyRow matrix row
 
         bitmap |> Bitmap.lockBits ImageLockMode.ReadOnly (fun data ->
-            (0, height - 1) |> ISeq.piter (cloneRow data))
+            (0, height - 1) |> Range.piter (cloneRow data))
         matrix
 
     let load fileName = 
@@ -33,7 +33,7 @@ module Picture =
             |> Bitmap.setPhysicalPixels data row
 
         bitmap |> Bitmap.lockBits ImageLockMode.WriteOnly (fun data ->
-            (0, height - 1) |> ISeq.piter (cloneRow data))
+            (0, height - 1) |> Range.piter (cloneRow data))
         bitmap
 
     let showOne title picture = 

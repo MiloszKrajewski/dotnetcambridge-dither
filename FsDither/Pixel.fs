@@ -23,8 +23,6 @@ module Pixel =
         val g: Value
         val b: Value
         new(r, g, b) = { r = r; g = g; b = b }
-        new((r, g, b)) = { r = r; g = g; b = b }
-        new(l) = { r = l; g = l; b = l }
 
     let inline fromInt32 physical =
         let inline toValue o v = v >>> o |> Value.fromByte
@@ -34,11 +32,9 @@ module Pixel =
         let inline toByte o v = v |> Value.toByte <<< o
         (toByte 16 logical.r) ||| (toByte 8 logical.g) ||| (toByte 0 logical.b)
 
-    let inline fromL (l: Value) = Pixel(l)
+    let inline fromL (l: Value) = Pixel(l, l, l)
 
     let inline getR (pixel: Pixel) = pixel.r
     let inline getG (pixel: Pixel) = pixel.g
     let inline getB (pixel: Pixel) = pixel.b
     let inline getL (pixel: Pixel) = 0.2126*pixel.r + 0.7152*pixel.g + 0.0722*pixel.b
-
-

@@ -1,14 +1,18 @@
 ﻿namespace FsDither
 
+open System
+open System.Threading.Tasks
+
 module Triplet =
     let inline map f (a, b, c) = (f a, f b, f c)
     let inline reduce f (a, b, c) = a |> f b |> f c
 
-module ISeq =
-    open System
-    open System.Threading.Tasks
+module Seq =
+    let inline piter func (s: 'a seq) = 
+        Parallel.ForEach(s, Action<'a>(func)) |> ignore
 
-    let inline fold state func (lo, hi) = 
+module Range =
+    let inline fold func state (lo, hi) = //!!!
         let mutable s = state
         for i = lo to hi do s <- func i s
         s
@@ -18,11 +22,6 @@ module ISeq =
 
     let inline piter func (lo, hi) =
         Parallel.For(lo, hi + 1, Action<int>(func)) |> ignore
-
-module Seq =
-    open FSharp.Collections.ParallelSeq
-
-    let inline piter f s = PSeq.iter f s
 
 module Matrix = // Array@d
     let inline widthOf matrix = Array2D.length2 matrix
@@ -59,7 +58,7 @@ module Matrix = // Array@d
         let result = zeroCreate height width
         let inline initPixel y x = result.[y, x] <- func y x
         let inline initRow row = for x = 0 to width - 1 do initPixel row x
-        (0, height - 1) |> ISeq.piter initRow
+        (0, height - 1) |> Range.piter initRow
         result
 
     let pmap func matrix =

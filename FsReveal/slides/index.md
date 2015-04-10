@@ -13,7 +13,30 @@
 
 ## ...and Knuth
 
-http://bit.ly/1O2WLA0
+***
+
+### About me
+
+- Milosz Krajewski
+- BLOBAs @ Sepura
+- first line of code written in ~1984
+- C, C++, C#, SQL
+- Python, F#
+
+---
+
+- Algorithms
+- Data Structures
+- Algorithm Complexity
+- Graph Theory
+- Design Patterns
+
+---
+
+- Parallel
+- Distributed
+- Reactive
+- Functional
 
 ***
 
@@ -111,7 +134,7 @@ If you like those features in C#:
 - Nullables
 - Iterators (`yield`)
 - Implicit types and type inference (`var` and `X<T>`)
-- Lambda function
+- Lambda functions
 - Asynchronous (`async` and `await`)
 - Linq / extension methods
 
@@ -119,44 +142,22 @@ F# is for you.
 
 ***
 
-### F#
+### F# is
 
 - Low ceremony, low noise
 - Visually honest
 - Strongly typed with type inference and automatic generalization
 - Expression orientated
 - Pattern matching
-- Functional / currying
+- Functional
 - Immutable by default
-
----
-
-It is also:
-- Module extensions
-- Ad-hoc interface implementation
-- Implicitly SOLID
-
-(but I will skip those this time)
+- Inherently SOLID (but I will skip this one)
 
 ***
 
 #### Low ceremony, low noise
 
-`PersonDTO` in F#
-
-    [lang=fs]
-    open System
-
-    type PersonDTO(name, age) =
-        let id = Guid.NewGuid()
-        member x.Id = id
-        member x.Name = name
-        member x.Age = age
-        override x.ToString() = sprintf "Person(Name: \"%s\", Age: %d)" name age
-
----
-
-Same `PersonDTO` in C#
+`PersonDTO` in C#
 
     [lang=cs]
     public class PersonDTO
@@ -183,11 +184,9 @@ Same `PersonDTO` in C#
         }
     }
 
-but it's not over yet...
+(...not over yet...)
 
 ---
-
-...in F# you get this for free
 
     [lang=cs]
     public class PersonDTO
@@ -210,6 +209,20 @@ but it's not over yet...
 
 ---
 
+while in F# it would be:
+
+    [lang=fs]
+    open System
+
+    type PersonDTO(name, age) =
+        let id = Guid.NewGuid()
+        member x.Id = id
+        member x.Name = name
+        member x.Age = age
+        override x.ToString() = sprintf "Person(Name: \"%s\", Age: %d)" name age
+
+---
+
 ![HelloWorld.java](images/hellojava.png)
 
 ***
@@ -220,7 +233,7 @@ but it's not over yet...
 
 ---
 
-C# is generally left-to-right and top-down, but has islands of right-to-left and bottom-up:
+C# is generally left-to-right and top-down, but has islands of right-to-left'isms and bottom-up'isms:
     
     [lang=cs]
     SendEmail(
@@ -287,17 +300,17 @@ It's like `var` but everywhere:
 
     [lang=fs]
     open System
-    
+
     /// retries given action
-    /// returns its result or throws exception 
+    /// returns its result or throws exception
     /// after `countLimit` failures or when `timeLimit` expires
     let retry countLimit timeLimit func arg =
         let timeLimit = DateTime.Now.Add(TimeSpan.FromSeconds(timeLimit))
         let rec retry count =
             match count, DateTime.Now with
-            | c, t when (c > 0) && (c > countLimit || t > timeLimit) -> 
+            | c, t when (c > 0) && (c > countLimit || t > timeLimit) ->
                 failwith "Operation failed"
-            | c, _ -> 
+            | c, _ ->
                 try func arg with | _ -> retry (c + 1)
         retry 0
 
@@ -316,7 +329,7 @@ in C# `switch` is a statement not an expression, it doesn't have result, it just
         // ...
         case 9: text = "nine";
     }
-    
+
 ---
 
 Sometime you just wish for:
@@ -334,13 +347,13 @@ Sometime you just wish for:
 In F# `match` is an expression
 
     [lang=fs]
-    let text = 
+    let text =
         match digit with
         | 0 -> "zero"
         | 1 -> "one"
         // ...
         | 9 -> "nine"
-        
+
 ---
 
 ...as well as `try`/`catch`:
@@ -349,14 +362,14 @@ In F# `match` is an expression
     let text = Console.ReadLine()
     let value = try Int32.Parse(text) with | _ -> 0
     printfn "%d" value
-    
+
 ---
 
 in C# it get's messy when variable is of some complex type:
 
     [lang=cs]
     IEnumerable<IGrouping<int, Tuple<string, IEnumerable<double>>> result;
-    
+
     try
     {
         result = SomeFunctionReturningComplexType();
@@ -365,9 +378,9 @@ in C# it get's messy when variable is of some complex type:
     {
         result = AlternativeAccessToResult();
     }
-    
+
     DoSomethingWith(result);
-    
+
 ---
 
 `var` is not an option as it would limit the scope:
@@ -382,17 +395,17 @@ in C# it get's messy when variable is of some complex type:
         var result = AlternativeAccessToResult();
         // ???
     }
-    
+
     // "result" is not available here...
 
 
 ---
 
-...and `seq` (`IEnumerable`) generators:
+Generators (`IEnumerable`) are also expressions (not functions):
 
     [lang=fs]
     let powers = seq { for i = 0 to 31 do yield 1u <<< i }
-    for p in powers do 
+    for p in powers do
         printfn "%d" p
 
 ***
@@ -427,25 +440,26 @@ The `EnumerateLines` method we used before:
     }
 
 had two sub-optimal solutions:
+
 - up-front declaration of `line`
 - naughty assigment in the middle of condition
 
 ---
 
 Just because of `match` syntax we don't need to do any of those:
-    
+
     [lang=fs]
-    let rec enumerateLines (reader: TextReader) = 
-        seq { 
-            match reader.ReadLine() with 
-            | null -> () 
-            | line -> yield line; yield! enumerateLines reader 
+    let rec enumerateLines (reader: TextReader) =
+        seq {
+            match reader.ReadLine() with
+            | null -> ()
+            | line -> yield line; yield! enumerateLines reader
         }
 
 (with type extender, if you like)
 
     [lang=fs]
-    type TextReader with member this.EnumerateLines() = this |> enumerateLines
+    type TextReader with member reader.EnumerateLines() = reader |> enumerateLines
 
 ---
 
@@ -486,10 +500,10 @@ Bait-and-switch / is-as:
 
     // string is a string
     func5 ("string") |> printfn "%s"
-    
+
 ---
 
-C# alternative
+C# alternative (`is` and `as`)
 
     [lang=cs]
     static string Func5(object subject)
@@ -510,18 +524,18 @@ C# alternative
         }
     }
     
-cast twice
-    
+**Problem**: double cast
+
 ---
 
-C# alternative
+C# alternative (`as` and `null`)
 
     [lang=cs]
     static string Func5(object subject)
     {
         var sb = subject as StringBuilder;
         var s = subject is string;
-        
+
         if (sb != null)
         {
             return sb.Append(" was a StringBuilder").ToString();
@@ -536,7 +550,37 @@ C# alternative
         }
     }
     
-local variable with `as` and `null` (but wrong scope, premature evaluation and/or problem with `else`)
+**Problem**: wrong scope (too wide) and premature evaluation
+
+---
+
+C# alternative (`as` and `null`)
+
+    [lang=cs]
+    static string Func5(object subject)
+    {
+        var sb = subject as StringBuilder;
+
+        if (sb != null)
+        {
+            return sb.Append(" was a StringBuilder").ToString();
+        }
+        else
+        {
+            var s = subject is string;
+            
+            if (s != null)
+            {
+                return s + " is a string";
+            }
+            else
+            {
+                throw new ArgumentException("No idea what to do", "subject");
+            }
+        }
+    }
+    
+**Problem**: else induced pyramid of doom
 
 ***
 
@@ -550,6 +594,26 @@ All functions have one argument and one result.
 
 ---
 
+You would think that you have:
+
+    [lang=cs]
+    Action action;
+    Func<T> factory;
+    Func<T, U> converter;
+    Func<T, U, V> combinator;
+
+while in fact there is only one type:
+
+    [lang=cs]
+    Func<T, U> func;
+
+or:
+    
+    [lang=fs]
+    func: 'a -> 'b
+
+---
+
 C#
 
     [lang=cs]
@@ -559,14 +623,14 @@ F#
 
     [lang=fs]
     action: unit -> unit
-    
+
 ---
 
 C#
 
     [lang=cs]
     Action<string> action; // Func<string, void>
-    
+
 F#
 
     [lang=fs]
@@ -577,8 +641,8 @@ F#
 C#
 
     [lang=cs]
-    Func<string> func; // Func<void, string> 
-    
+    Func<string> func; // Func<void, string>
+
 F#
 
     [lang=fs]
@@ -590,7 +654,7 @@ C#
 
     [lang=cs]
     Func<double, string> func;
-    
+
 F#
 
     [lang=fs]
@@ -602,7 +666,7 @@ C#
 
     [lang=cs]
     Func<double, int, byte[], string> func;
-    
+
 F#
 
     [lang=fs]
@@ -614,7 +678,7 @@ F#
 
     [lang=fs]
     func: float -> int -> byte[] -> string
-    
+
 is actually:
 
     [lang=fs]
@@ -634,7 +698,7 @@ Currying / partial application
         for id in getAllPersonIds () do
             let person = personLoader id
             sendEmailTo person
-    
+
     let loadPerson (connection: SqlConnection) (id: int) =
         // ... do stuff ...
 
@@ -673,26 +737,26 @@ Let's consider a program to calculate a sum of given numbers:
         return sumSoFar;
     }
 
-    public static void Main() 
+    public static void Main()
     {
         Console.WriteLine("{0}", Sum(new[] { 1.0, 2.0, 3.0, 4.0 }));
     }
-    
+
 ***
 
 In F# you don't mutate result:
 
     [lang=fs]
-    let sum values = 
-       let rec partial sumSoFar list = 
+    let sum values =
+       let rec partial sumSoFar list =
            match list with
            | [] -> sumSoFar
-           | head :: tail -> partial (head + sumSoFar) tail 
+           | head :: tail -> partial (head + sumSoFar) tail
        partial 0.0 values
 
     printfn "%g" (sum [ 1.0; 2.0; 3.0; 4.0 ])
-    
-you produce new result a pass it forward
+
+you produce new result and pass it forward
 
 ***
 
@@ -714,7 +778,7 @@ you produce new result a pass it forward
 ### map
 
     [lang=fs]
-    X.map: (f: T -> U) -> (x: X<T>) -> X<U>
+    X.map: (f: 'T -> 'U) -> (x: X<'T>) -> X<'U>
 
 ![map](images/map.png)
 
@@ -724,7 +788,7 @@ in C# known as `Select`, for example:
 
     [lang=fs]
     ["image1.jpg"; "image2.jpg"]
-    |> Seq.map (fun fn -> Image.FromFile(fn))  
+    |> Seq.map Image.FromFile
 
 is equivalent to:
 
@@ -737,7 +801,7 @@ is equivalent to:
 ### reduce
 
     [lang=fs]
-    X.reduce (f: T -> T -> T) -> (x: X<T>) -> T
+    X.reduce (f: 'T -> 'T -> 'T) -> (x: X<'T>) -> 'T
 
 ![reduce](images/reduce.png)
 
@@ -747,13 +811,13 @@ is equivalent to:
 
     [lang=fs]
     values |> Seq.reduce (+)
-    
+
 ---
 
 #### factorial n
 
     [lang=fs]
-    // { 2..n } = seq { for i = 2 to n yield i }
+    // { 2..n } = seq { for i = 2 to n do yield i }
     { 2..n } |> Seq.reduce (*)
 
 ---
@@ -761,7 +825,7 @@ is equivalent to:
 #### min
 
     [lang=fs]
-    values |> Seq.reduce (fun a b -> if a < b then a else b)
+    values |> Seq.reduce (fun a b -> if a <= b then a else b)
 
 ---
 
@@ -776,36 +840,36 @@ is equivalent to:
 
     [lang=fs]
     values |> Seq.reduce (fun a b -> a)
-    
+
 ---
 
 #### last
 
     [lang=fs]
     values |> Seq.reduce (fun a b -> b)
-    
+
 ***
 
 ### fold
 
     [lang=fs]
-    X.fold (f: S -> T -> S) -> (s: S) -> (x: X<T>) -> S
+    X.fold (f: 'S -> 'T -> 'S) -> (s: 'S) -> (x: X<'T>) -> 'S
 
 ![fold](images/fold.png)
 
 ---
 
     [lang=fs]
-    let reduce = 
-        [1; 2; 3; 4; 5] 
+    let reduce =
+        [1; 2; 3; 4; 5]
         |> Seq.reduce (fun a b -> a + b)
-        
-    let fold1 = 
-        [1; 2; 3; 4; 5] 
+
+    let fold1 =
+        [1; 2; 3; 4; 5]
         |> Seq.fold (fun a b -> a + b) 0
 
-    let fold2 = 
-        [1; 2; 3; 4; 5] 
+    let fold2 =
+        [1; 2; 3; 4; 5]
         |> Seq.fold (fun s n -> s + string n) ""
 
     // reduce: 15, fold1: 15, fold2: "12345"
@@ -813,10 +877,49 @@ is equivalent to:
 
 ***
 
+### iter
+
+    [lang=fs]
+    X.iter (f: 'T -> unit) -> (x: X<'T>) -> unit
+    
+![iter](images/iter.png)
+
+---
+
+    [lang=fs]
+    let countDown () = 
+        { 10..-1..0 }
+        |> Seq.iter (printfn "%d")
+        
+    // 10... 9... 8... 1... 0
+    countDown ()
+
+***
+
+### filter
+
+    [lang=fs]
+    X.filter (f: 'T -> bool) -> (x: X<'T>) -> X<'T>
+    
+![filter](images/filter.png)
+
+---
+
+    [lang=fs]
+    let allNumbers = [ 1..10 ]
+    let evenNumbers = 
+        allNumbers 
+        |> List.filter (fun n -> n % 2 = 0)
+
+    // all: [1; 2; 3; 4; 5; 6; 7; 8; 9; 10], even: [2; 4; 6; 8; 10]
+    printfn "all: %A, even: %A" allNumbers evenNumbers
+
+***
+
 ### scan
 
     [lang=fs]
-    X.scan (f: S -> T -> S) -> (s: S) -> (x: X<T>) -> X<S>
+    X.scan (f: 'S -> 'T -> 'S) -> (s: 'S) -> (x: X<'T>) -> X<'S>
 
 ![scan](images/scan.png)
 
@@ -825,14 +928,14 @@ is equivalent to:
 Like `fold` as it has state, but also yields state on every item:
 
     [lang=fs]
-    let fold = 
-        [1; 2; 3; 4; 5] 
+    let fold =
+        [1; 2; 3; 4; 5]
         |> List.fold (fun s n -> s + string n) ""
 
-    let scan = 
+    let scan =
         [1; 2; 3; 4; 5]
         |> List.scan (fun s n -> s + string n) ""
-        
+
     // fold: "12345", scan: [""; "1"; "12"; "123"; "1234"; "12345"]
     printfn "fold: %A, scan: %A" fold scan
 
@@ -840,16 +943,25 @@ Like `fold` as it has state, but also yields state on every item:
 
 ***
 
+### Your first zip/fold/scan
+
+![your first scan](images/your-first-scan.jpg)
+
+***
+
 ### unfold
+
+    [lang=fs]
+    X.unfold (f: 'S -> ('T * 'S) option) -> 'S -> X<'T>
 
 ![unfold](images/unfold.png)
 
 ---
 
     [lang=fs]
-    let countDown = 
-        10 
-        |> Seq.unfold (fun s -> if s < 0 then None else Some (string s, s - 1)) 
+    let countDown =
+        10
+        |> Seq.unfold (fun s -> if s < 0 then None else Some (string s, s - 1))
         |> Seq.toList
 
     // unfold: ["10"; "9"; "8"; "7"; "6"; "5"; "4"; "3"; "2"; "1"; "0"]
@@ -857,26 +969,18 @@ Like `fold` as it has state, but also yields state on every item:
 
 ***
 
-### Everything* is unfold/map/fold
+### Everything* is unfold/filter/map/fold
 
     [lang=fs]
     let csvToXml fileName =
         fileName
         |> openStream
         |> Seq.unfold readLine
-        |> Seq.map parsePerson
+        |> Seq.map tryParsePerson
+        |> Seq.filter isValidPerson
         |> Seq.fold addToXml (XmlDocument())
-        
-*unless it is map/reduce
-    
-***
 
-So, far so good.
-
-idiomatic ad-hoc interface implementation
-idiomatic type extension
-idiomatic module extension
-properties-to-fields http://stackoverflow.com/questions/15454470/why-arent-simple-properties-optimized-to-fields
+*actually, everything is `.SelectMany(...)`
 
 ***
 
@@ -918,6 +1022,327 @@ properties-to-fields http://stackoverflow.com/questions/15454470/why-arent-simpl
 
 ***
 
+    [lang=fs]
+    open System.IO
+    open System.Diagnostics
+
+    [<AutoOpen>]
+    module Tools =
+        #if INTERACTIVE
+        let root = __SOURCE_DIRECTORY__
+        #else
+        let root = "."
+        #endif
+
+        let timeit name func arg =
+            let timer = Stopwatch.StartNew()
+            let result = func arg
+            timer.Stop()
+            printfn "%s: %f" name timer.Elapsed.TotalMilliseconds
+            result
+
+        let resolvePath path = Path.Combine(root, path)
+
+***
+
+    [lang=fs]
+    module UI =
+        open System.Drawing
+        open System.Threading
+        open System.Windows.Forms
+
+        type ViewerForm() as form =
+            inherit Form(TopMost = true)
+
+            let viewer = 
+                new PictureBox(
+                    Dock = DockStyle.Fill, 
+                    SizeMode = PictureBoxSizeMode.Zoom)
+
+            do form.Controls.Add(viewer)
+
+            member form.LoadImage (title, image) = 
+                form.Text <- title
+                viewer.Image <- image
+                form.AdjustSize image.Size
+
+            member form.NextImage =
+                form.KeyPress
+                |> Event.filter (fun e -> e.KeyChar = ' ')
+                |> Event.map (fun _ -> form)
+
+---
+
+    [lang=fs]
+    module UI =
+        type ViewerForm() as form =
+            member private form.AdjustSize clientSize =
+                let screenRect = Screen.FromControl(form).WorkingArea
+                let formMargin = 
+                    Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
+                let maximumClientSize = 
+                    Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
+
+                let ratioX = float maximumClientSize.Width / float clientSize.Width
+                let ratioY = float maximumClientSize.Height / float clientSize.Height
+                let ratio = min ratioX ratioY
+                let clientX = float clientSize.Width * ratio |> round |> int
+                let clientY = float clientSize.Height * ratio |> round |> int
+                let originX = (screenRect.Left + screenRect.Width - clientX - formMargin.Width) / 2
+                let originY = (screenRect.Top + screenRect.Height - clientY - formMargin.Height) / 2
+
+                form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
+
+---
+
+    [lang=fs]
+    module UI =
+        let private show (setup: ViewerForm -> unit) =
+            let action () = 
+                let form = new ViewerForm()
+                setup form
+                Application.Run(form)
+            Thread(action, IsBackground = true).Start()
+
+        let showOne title image =
+            show (fun f ->
+                f.NextImage |> Event.add (fun _ -> f.Close())
+                f.LoadImage(title, image)
+            )
+
+        let showMany (images: (string * #Image) seq) =
+            let images = images.GetEnumerator()
+            show (fun f ->
+                let nextImage () = 
+                    match images.MoveNext() with
+                    | true -> images.Current |> f.LoadImage
+                    | _ -> f.Close()
+                f.NextImage |> Event.add (fun _ -> nextImage ())
+                nextImage ()
+            )
+
+---
+
+I didn't like 3-line `action ()` in `show (...)`, so from:
+
+    [lang=fs]
+    let private show (setup: ViewerForm -> unit) =
+        let action () = 
+            let form = new ViewerForm()
+            setup form
+            Application.Run(form)
+        Thread(action, IsBackground = true).Start()
+
+it became:
+
+    [lang=fs]
+    let private show (setup: ViewerForm -> unit) =
+        let inline apply func arg = func arg; arg
+        let action () = Application.Run(new ViewerForm() |> apply setup)
+        Thread(action, IsBackground = true).Start()
+
+(**NOTE:** `apply`, `Array.Sort(...)` and `.Do(...)`)
+
+---
+
+actually, for interactive session:
+
+    [lang=fs]
+    #if INTERACTIVE
+    let private show (setup: ViewerForm -> unit) =
+        let inline apply func arg = func arg; arg
+        (new ViewerForm() |> apply setup).Show()
+    #else
+    // ...
+    #endif
+
+---
+
+    [lang=fs]
+    open System.Drawing
+    open System.Drawing.Imaging
+    open System.Runtime.InteropServices
+
+    module Bitmap =
+        let bitmapFormat = PixelFormat.Format32bppRgb
+
+        let private enforceFormat (image: Image) =
+            match image with
+            | :? Bitmap as bitmap when bitmap.PixelFormat = bitmapFormat ->
+                bitmap
+            | _ ->
+                let width, height = image.Width, image.Height
+                let bitmap = new Bitmap(width, height, bitmapFormat)
+                use graphics = Graphics.FromImage(bitmap)
+                graphics.DrawImage(image, 0, 0, width, height)
+                bitmap
+
+        let load (fileName: string) = 
+            let fileName = Tools.resolvePath fileName
+            fileName |> Image.FromFile |> enforceFormat
+            
+(**NOTE:** bait-and-switch and shadowing)
+
+---
+
+at this point we can show some pictures:
+
+    [lang=fs]
+    #load "load-project.fsx"
+    open FsDither
+
+    "lena.jpg" |> Bitmap.load |> UI.showOne "lena"
+    ["lena.jpg"; "david.jpg"] |> Seq.iter (fun fn -> fn |> Bitmap.load |> UI.showOne fn)
+    ["lena.jpg"; "david.jpg"] |> Seq.map (fun fn -> (fn, fn |> Bitmap.load)) |> UI.ahowMany
+
+---
+
+    [lang=fs]
+    module Bitmap =
+        let lockBits (lockMode: ImageLockMode) (func: BitmapData -> 'a) (bitmap: Bitmap) =
+            let width, height = bitmap.Width, bitmap.Height
+            let rect = Rectangle(0, 0, width, height)
+            let data = bitmap.LockBits(rect, lockMode, bitmapFormat)
+            try
+                func data
+            finally
+                bitmap.UnlockBits(data)
+
+        let inline private physicalRowAddress line (data: BitmapData) = 
+            data.Scan0 + nativeint (data.Stride * line)
+
+        let getPhysicalPixels (data: BitmapData) row =
+            assert (data.PixelFormat = bitmapFormat)
+            let width = data.Width
+            let buffer = Array.zeroCreate<int32> width
+            let pointer = data |> physicalRowAddress row
+            Marshal.Copy(pointer, buffer, 0, buffer.Length)
+            buffer
+
+        let setPhysicalPixels (data: BitmapData) row (vector: int32[]) =
+            assert (data.PixelFormat = bitmapFormat)
+            assert (data.Width = vector.Length)
+            let pointer = data |> physicalRowAddress row
+            Marshal.Copy(vector, 0, pointer, vector.Length)
+
+***
+
+### Let's get started...
+
+***
+
+    [lang=fs]
+    module Value =
+        type Value = float
+
+        let inline fromByte v = (v &&& 0xFF |> float) / 255.0
+        let inline toByte v = (v |> min 1.0 |> max 0.0) * 255.0 |> round |> int
+        
+---
+
+    [lang=fs]
+    module Pixel =
+        open Value
+
+        [<Struct>]
+        type Pixel = 
+            val r: Value
+            val g: Value
+            val b: Value
+            new(r, g, b) = { r = r; g = g; b = b }
+
+        let inline fromInt32 physical =
+            let inline toValue o v = v >>> o |> Value.fromByte
+            Pixel(toValue 16 physical, toValue 8 physical, toValue 0 physical)
+
+        let inline toInt32 (logical: Pixel) =
+            let inline toByte o v = v |> Value.toByte <<< o
+            (toByte 16 logical.r) ||| (toByte 8 logical.g) ||| (toByte 0 logical.b)
+
+        let inline fromL (l: Value) = Pixel(l, l, l)
+
+        let inline getR (pixel: Pixel) = pixel.r
+        let inline getG (pixel: Pixel) = pixel.g
+        let inline getB (pixel: Pixel) = pixel.b
+        let inline getL (pixel: Pixel) = 0.2126*pixel.r + 0.7152*pixel.g + 0.0722*pixel.b
+
+---
+    
+Let's add parallel-iter (`piter`) to `Seq` module...
+
+    [lang=fs]
+    module Seq =
+        let inline piter func (s: 'a seq) = 
+            Parallel.ForEach(s, Action<'a>(func)) |> ignore
+            
+---
+
+...and define a `Range` module for pseudo-sequence `{lo..hi}`
+
+    [lang=fs]
+    module Range =
+        let inline iter func (lo, hi) = 
+            // { lo..hi } |> Seq.iter func
+            for i = lo to hi do func i
+
+        let inline piter func (lo, hi) =
+            // { lo..hi } |> Seq.piter func
+            Parallel.For(lo, hi + 1, Action<int>(func)) |> ignore
+
+---
+
+Technically `Picture` is just `Pixel[,]`:
+
+    [lang=fs]
+    open System.Drawing
+    open System.Drawing.Imaging
+
+    module Picture = 
+        open Value
+        open Pixel
+
+        let fromBitmap (bitmap: Bitmap) =
+            let width, height = bitmap.Width, bitmap.Height
+            let matrix = Matrix.zeroCreate height width
+
+            let inline cloneRow data row = 
+                Bitmap.getPhysicalPixels data row
+                |> Array.map Pixel.fromInt32
+                |> Matrix.applyRow matrix row
+
+            bitmap |> Bitmap.lockBits ImageLockMode.ReadOnly (fun data ->
+                (0, height - 1) |> Range.piter (cloneRow data))
+            matrix
+
+        let load fileName = 
+            fileName |> Bitmap.load |> fromBitmap
+
+---
+
+    [lang=fs]
+    module Picture = 
+        let toBitmap matrix =
+            let height, width = matrix |> Matrix.sizeOf
+            let bitmap = new Bitmap(width, height, Bitmap.bitmapFormat)
+
+            let inline cloneRow data row = 
+                Matrix.extractRow matrix row
+                |> Array.map Pixel.toInt32
+                |> Bitmap.setPhysicalPixels data row
+
+            bitmap |> Bitmap.lockBits ImageLockMode.WriteOnly (fun data ->
+                (0, height - 1) |> ISeq.piter (cloneRow data))
+            bitmap
+
+        let showOne title picture = 
+            picture |> toBitmap |> UI.showOne title
+
+        let showMany pictures =
+            pictures |> Seq.map (fun (t, p) -> t, p |> toBitmap) |> UI.showMany
+
+
+***
+
 # Turn back.
 
 ***
@@ -939,12 +1364,12 @@ You usually end up with `EnumerableEx`, `DateTimeHelpers`, `StringUtils` and `St
 
     [lang=fs]
     open System.Globalization
-    
+
     module DateTime =
         let private cultureInfoUS = CultureInfo.GetCultureInfo("en-US")
         let FromUS text = DateTime.Parse(text, cultureInfoUS)
-    
-    module Program = 
+
+    module Program =
         let someUSDateTime = "7/31/2015"
         let importDateTime = DateTime.FromUS(text)
         let currentDateTime = DateTime.Now // regular DateTime
@@ -952,15 +1377,15 @@ You usually end up with `EnumerableEx`, `DateTimeHelpers`, `StringUtils` and `St
 ---
 
 ...of course, you can still extend objects as in C#:
-    
+
     [lang=fs]
     open System
-    
+
     type DateTime with
         member x.ToUS () = "1/31/2014" // whatever it takes
-    
+
     DateTime.Now.ToUS() |> printfn "%A"
-    
+
 ***
 
 #### Ad-hoc interface implementation
@@ -983,7 +1408,7 @@ and some code which utilizes it:
             Console.WriteLine(factory.Create());
         }
     }
-    
+
 ---
 
 Let's say somewhere in the application we need to call `PrintSomeNumbers` with some random numbers:
@@ -992,13 +1417,13 @@ Let's say somewhere in the application we need to call `PrintSomeNumbers` with s
     public class RandomDoubleFactory : IFactory<double>
     {
         private Random _generator = new Random();
-        
+
         public double Create()
         {
             return _generator.NextDouble();
         }
     }
-    
+
     static void Main(string[] argv)
     {
         PrintSomeNumbers(new RandomDoubleFactory());
@@ -1009,7 +1434,7 @@ Let's say somewhere in the application we need to call `PrintSomeNumbers` with s
 In F# we can use ad-hoc interface implementation:
 
     [lang=fs]
-    let main argv = 
+    let main argv =
         let generator = Random()
         let adhoc = { new IFactory<double> with member x.Create() = generator.NextDouble() }
         PrintSomeNumbers(adhoc)

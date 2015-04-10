@@ -73,7 +73,7 @@ module FloydSteinberg =
 //            for x = 0 to xW do
 //                c <- processPixel x c
 
-            (0, xW) |> ISeq.fold 0.0 processPixel |> ignore
+            (0, xW) |> Range.fold processPixel 0.0 |> ignore
 
             cy1
 
@@ -82,7 +82,7 @@ module FloydSteinberg =
 //            cy <- processRow y cy
 
         let cy0 = Array.zeroCreate (width + 2)
-        (0, yH) |> ISeq.fold cy0 processRow |> ignore
+        (0, yH) |> Range.fold processRow cy0 |> ignore
 
         output
 
@@ -162,15 +162,15 @@ module PFloydSteinberg =
             let x0 = xC - r
             let xW = xC + w - r - 1
 
-            cx.[r] <- (lcapx x0, hcapx xW) |> ISeq.fold 0.0 processPixel
+            cx.[r] <- (lcapx x0, hcapx xW) |> Range.fold processPixel 0.0
             if y + 1 < imageHeight then
-                (lcapx x0, hcapx (xW + 1)) |> ISeq.iter (fun x -> update (y + 1) x cy.[w + x - xW])
+                (lcapx x0, hcapx (xW + 1)) |> Range.iter (fun x -> update (y + 1) x cy.[w + x - xW])
 
-        (y0, yH) |> ISeq.iter processRow
+        (y0, yH) |> Range.iter processRow
 
         let r0 = xC + w - (imageWidth - 1) |> max 0 // solve for r: xC - r + w <= iW - 1
         let rH = xC + w - 1 |> min (h - 1) // solve for r: xC - r + w >= 1
-        (r0, rH) |> ISeq.iter (fun r -> update (y0 + r) (xC + w - r) cx.[r])
+        (r0, rH) |> Range.iter (fun r -> update (y0 + r) (xC + w - r) cx.[r])
 
     let processLayer quantize input =
         let (height, width) as size = input |> Matrix.sizeOf 

@@ -36,6 +36,12 @@ let copyPics() =
       |> CopyFiles (outDir @@ "images")
     with
     | exn -> traceImportant <| sprintf "Could not copy picture: %s" exn.Message    
+    
+let generateAndFix func outDir outFile inFile = 
+    func outDir outFile inFile
+    let outputPath = outDir @@ outFile
+    let content = File.ReadAllText(outputPath).Replace("&amp;#39;", "'")
+    File.WriteAllText(outputPath, content)
 
 let generateFor (file:FileInfo) = 
     try
@@ -44,8 +50,8 @@ let generateFor (file:FileInfo) =
             try
                 let outputFileName = file.Name.Replace(file.Extension,".html")
                 match file.Extension with   
-                | ".md" ->  FsReveal.GenerateOutputFromMarkdownFile outDir outputFileName file.FullName
-                | ".fsx" -> FsReveal.GenerateOutputFromScriptFile outDir outputFileName file.FullName
+                | ".md" ->  generateAndFix FsReveal.GenerateOutputFromMarkdownFile outDir outputFileName file.FullName
+                | ".fsx" -> generateAndFix FsReveal.GenerateOutputFromScriptFile outDir outputFileName file.FullName
                 | _ -> ()
             with 
             | exn when trials > 0 -> tryGenerate (trials - 1)
