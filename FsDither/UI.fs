@@ -2,8 +2,8 @@
 
 module UI =
     open System.Drawing
-    open System.Threading
     open System.Windows.Forms
+    open System.Threading
 
     type ViewerForm() as form =
         inherit Form(TopMost = true)
@@ -42,30 +42,31 @@ module UI =
 
             form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
 
-    #if INTERACTIVE
-    let private show (setup: ViewerForm -> unit) =
-        let inline apply func arg = func arg; arg
-        (new ViewerForm() |> apply setup).Show()
-    #else
-    let private show (setup: ViewerForm -> unit) =
-        let inline apply func arg = func arg; arg
-        let action () = Application.Run(new ViewerForm() |> apply setup)
+    #if CONSOLE
+    let private showForm factory = 
+        let action () = Application.Run(factory () :> Form)
         Thread(action, IsBackground = true).Start()
+    #else
+    let private showForm factory = (factory () :> Form).Show()
     #endif
 
+    let private showViewer setup =
+        let factory () = new ViewerForm() |> apply setup
+        showForm factory
+
     let showOne title image =
-        show (fun f ->
-            f.NextImage |> Event.add (fun _ -> f.Close())
-            f.LoadImage(title, image)
+        showViewer (fun form ->
+            form.NextImage |> Event.add (fun _ -> form.Close())
+            form.LoadImage(title, image)
         )
 
     let showMany (images: (string * #Image) seq) =
         let images = images.GetEnumerator()
-        show (fun f ->
+        showViewer (fun form ->
             let nextImage () = 
                 match images.MoveNext() with
-                | true -> images.Current |> f.LoadImage
-                | _ -> f.Close()
-            f.NextImage |> Event.add (fun _ -> nextImage ())
+                | true -> images.Current |> form.LoadImage
+                | _ -> form.Close()
+            form.NextImage |> Event.add (fun _ -> nextImage ())
             nextImage ()
         )

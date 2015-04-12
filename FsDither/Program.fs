@@ -33,7 +33,7 @@ module Program =
                 "floyd!",
                 greyscale
                 |> Matrix.pmap PintFloydSteinberg.fromFloat
-                |> timeit "pintfloyd" (PintFloydSteinberg.processLayer 2)
+                |> Debug.timeit "pintfloyd" (PintFloydSteinberg.processLayer 2)
                 |> Matrix.pmap (PintFloydSteinberg.toFloat >> Pixel.fromL)
         } |> Picture.showMany
 

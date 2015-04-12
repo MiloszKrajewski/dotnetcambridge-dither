@@ -33,8 +33,8 @@ module Pixel =
         (toByte 16 logical.r) ||| (toByte 8 logical.g) ||| (toByte 0 logical.b)
 
     let inline fromL (l: Value) = Pixel(l, l, l)
+    let inline getL (pixel: Pixel) = 0.2126*pixel.r + 0.7152*pixel.g + 0.0722*pixel.b
 
     let inline getR (pixel: Pixel) = pixel.r
     let inline getG (pixel: Pixel) = pixel.g
     let inline getB (pixel: Pixel) = pixel.b
-    let inline getL (pixel: Pixel) = 0.2126*pixel.r + 0.7152*pixel.g + 0.0722*pixel.b

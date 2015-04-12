@@ -60,7 +60,8 @@ module FloydSteinberg =
 
             let inline diffuseError x error =
                 let error' = error / 16.0
-                let inline diffuseDown x error ratio = cy1.[x + 1] <- cy1.[x + 1] + error * ratio
+                let inline diffuseDown x error ratio = 
+                    cy1.[x + 1] <- cy1.[x + 1] + error * ratio
                 diffuseDown (x - 1) error' 3.0
                 diffuseDown x error' 5.0
                 diffuseDown (x + 1) error' 1.0
@@ -69,17 +70,9 @@ module FloydSteinberg =
             let inline processPixel x c = 
                 c |> calculateValue x |> diffuseError x
 
-//            let mutable c = 0.0
-//            for x = 0 to xW do
-//                c <- processPixel x c
-
             (0, xW) |> Range.fold processPixel 0.0 |> ignore
 
             cy1
-
-//        let mutable cy = Array.zeroCreate (width + 2)
-//        for y = 0 to yH do 
-//            cy <- processRow y cy
 
         let cy0 = Array.zeroCreate (width + 2)
         (0, yH) |> Range.fold processRow cy0 |> ignore

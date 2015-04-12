@@ -40,11 +40,15 @@
 
 ***
 
+### Definite statements
+
 > All generalizations are false, including this one. -- **Mark Twain**
 
 ---
 
-> It is not about what is possible, it is about what is natural. -- **Me**
+### Turning completeness and equivalence
+
+It is not about what is possible, it is about what is natural.
 
 ***
 
@@ -55,6 +59,15 @@
 - use idiomatic F#
 - use non-idiomatic F# when beneficial
 - prove Donald Knuth wrong (kind of)
+
+---
+
+### Not on agenda
+
+- Discriminated unions
+- Active patterns
+- Async monad
+- Monads
 
 ***
 
@@ -710,7 +723,7 @@ Currying / partial application
 
 How I can get anything done without mutability?
 
-***
+---
 
 Once upon the time...
 
@@ -724,7 +737,7 @@ Once upon the time...
     80 LET X = X + 1
     ...
 
-***
+---
 
 Let's consider a program to calculate a sum of given numbers:
 
@@ -742,7 +755,7 @@ Let's consider a program to calculate a sum of given numbers:
         Console.WriteLine("{0}", Sum(new[] { 1.0, 2.0, 3.0, 4.0 }));
     }
 
-***
+---
 
 In F# you don't mutate result:
 
@@ -764,14 +777,14 @@ you produce new result and pass it forward
 
 > **idiomatic**: using, containing, or denoting expressions that are natural to a native speaker.
 
-***
+---
 
 ### Idiomatic F#?
 
 - Separation of data and behaviour
 - Functions all the way down
 - No abstraction is too small
-- Map/reduce
+- Map/reduce (zip/fold/iter/...)
 
 ***
 
@@ -984,6 +997,272 @@ Like `fold` as it has state, but also yields state on every item:
 
 ***
 
+### UI
+
+---
+
+`ViewerForm` with `PictureBox` on it:
+
+    [lang=fs]
+    module UI =
+        open System.Drawing
+        open System.Threading
+        open System.Windows.Forms
+
+        type ViewerForm() as form =
+            inherit Form(TopMost = true)
+
+            let viewer = 
+                new PictureBox(
+                    Dock = DockStyle.Fill, 
+                    SizeMode = PictureBoxSizeMode.Zoom)
+
+            do form.Controls.Add(viewer)
+
+---
+
+...with ability to `LoadImage` and `NextImage` event:
+
+    [lang=fs]
+    module UI =
+        type ViewerForm() as form =
+            member form.LoadImage (title, image) = 
+                form.Text <- title
+                viewer.Image <- image
+                form.AdjustSize image.Size
+
+            member form.NextImage =
+                form.KeyPress
+                |> Event.filter (fun e -> e.KeyChar = ' ')
+                |> Event.map (fun _ -> form)
+
+---
+
+...one of longest methods here, adjusts form size to fit image:
+
+    [lang=fs]
+    module UI =
+        type ViewerForm() as form =
+            member private form.AdjustSize clientSize =
+                let screenRect = Screen.FromControl(form).WorkingArea
+                let formMargin = 
+                    Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
+                let maximumClientSize = 
+                    Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
+
+                let ratioX = float maximumClientSize.Width / float clientSize.Width
+                let ratioY = float maximumClientSize.Height / float clientSize.Height
+                let ratio = min ratioX ratioY
+                let clientX = float clientSize.Width * ratio |> round |> int
+                let clientY = float clientSize.Height * ratio |> round |> int
+                let originX = (screenRect.Left + screenRect.Width - clientX - formMargin.Width) / 2
+                let originY = (screenRect.Top + screenRect.Height - clientY - formMargin.Height) / 2
+
+                form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
+
+---
+
+Showing form in console application is a little bit different than in F# interactive (or WinForms application):
+
+    [lang=fs]
+    module UI =
+        #if CONSOLE
+        let private showForm factory = 
+            let action () = Application.Run(factory () :> Form)
+            Thread(action, IsBackground = true).Start()
+        #else
+        let private showForm factory = (factory () :> Form).Show()
+        #endif
+
+        let private showViewer setup =
+            let factory () = let form = new ViewerForm() in setup form; form
+            showForm factory
+
+(**Note**: no abstraction is too small)
+
+---
+
+My own solution to functions returning `unit` or 'ignorable' results is `apply-in-passing` operator:
+
+    [lang=fs]
+    [<AutoOpen>]
+    module Operators =
+        let inline apply func arg = func arg |> ignore; arg
+
+which allows more 'flow':
+
+    [lang=fs]
+    module UI =
+        let private showViewer setup =
+            // let factory () = let form = new ViewerForm() in setup form; form
+            let factory () = new ViewerForm() |> apply setup
+            showForm factory
+
+(**Note**: Select, ForEach, Array.Sort)
+
+---
+
+But the interface of UI module are actually these two methods: `showOne` and `showMany`:
+
+    [lang=fs]
+    module UI =
+        let showOne title image =
+            showViewer (fun form ->
+                form.NextImage |> Event.add (fun _ -> form.Close())
+                form.LoadImage(title, image)
+            )
+
+        let showMany (images: (string * #Image) seq) =
+            let images = images.GetEnumerator()
+            showViewer (fun form ->
+                let nextImage () = 
+                    match images.MoveNext() with
+                    | true -> images.Current |> form.LoadImage
+                    | _ -> form.Close()
+                form.NextImage |> Event.add (fun _ -> nextImage ())
+                nextImage ()
+            )
+
+(**Note**: images.Current |> form.LoadImage)
+
+***
+
+### Bitmap
+
+***
+
+To ceorce loaded bitmaps into right format:
+
+    [lang=fs]
+    open System.Drawing
+    open System.Drawing.Imaging
+    open System.Runtime.InteropServices
+
+    module Bitmap =
+        let bitmapFormat = PixelFormat.Format32bppRgb
+
+        let private enforceFormat (image: Image) =
+            match image with
+            | :? Bitmap as bitmap when bitmap.PixelFormat = bitmapFormat ->
+                bitmap
+            | _ ->
+                let width, height = image.Width, image.Height
+                let bitmap = new Bitmap(width, height, bitmapFormat)
+                use graphics = Graphics.FromImage(bitmap)
+                graphics.DrawImage(image, 0, 0, width, height)
+                bitmap
+
+(**Note**: bait-and-switch)
+
+---
+
+In F# interactive current folder is in Temp folder; we don't want to play with paths in out session, so let's introduce fixPath function:
+
+    [lang=fs]
+    module Bitmap =
+        #if INTERACTIVE
+        let private fixPath path = System.IO.Path.Combine(__SOURCE_DIRECTORY__, path)
+        #else
+        let inline private fixPath path = path
+        #endif
+
+...allowing `Bitmap.load` to work seamlessly both in project and interactive session:
+
+    [lang=fs]
+    module Bitmap =
+        let load (fileName: string) = 
+            fileName |> fixPath |> Image.FromFile |> enforceFormat
+
+
+---
+
+...and at this point we can show some pictures:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    "lena.jpg" |> Bitmap.load |> UI.showOne "lena"
+
+    ["lena.jpg"; "david.jpg"] 
+    |> Seq.iter (fun fn -> fn |> Bitmap.load |> UI.showOne fn)
+
+    ["lena.jpg"; "david.jpg"] 
+    |> Seq.map (fun fn -> (fn, fn |> Bitmap.load)) 
+    |> UI.showMany
+
+---
+
+For performance reason, we won't be using `GetPixel` on Bitmap, we will be using raw bitmap data (and that's why we were coercing bitmap into known format):
+
+    [lang=fs]
+    module Bitmap =
+        let lockBits (lockMode: ImageLockMode) (func: BitmapData -> 'a) (bitmap: Bitmap) =
+            let width, height = bitmap.Width, bitmap.Height
+            let rect = Rectangle(0, 0, width, height)
+            let data = bitmap.LockBits(rect, lockMode, bitmapFormat)
+            try
+                func data
+            finally
+                bitmap.UnlockBits(data)
+
+(**Note**: function-brackets, using, lock)
+
+---
+
+...so having raw bitmap data (`BitmapData`), we can read and write rows:
+
+    [lang=fs]
+    module Bitmap =
+        let inline private physicalRowAddress line (data: BitmapData) = 
+            data.Scan0 + nativeint (data.Stride * line)
+
+        let getPhysicalPixels (data: BitmapData) row =
+            assert (data.PixelFormat = bitmapFormat)
+            let width = data.Width
+            let buffer = Array.zeroCreate<int32> width
+            let pointer = data |> physicalRowAddress row
+            Marshal.Copy(pointer, buffer, 0, buffer.Length)
+            buffer
+
+        let setPhysicalPixels (data: BitmapData) row (vector: int32[]) =
+            assert (data.PixelFormat = bitmapFormat)
+            assert (data.Width = vector.Length)
+            let pointer = data |> physicalRowAddress row
+            Marshal.Copy(vector, 0, pointer, vector.Length)
+
+(**Note**: Make illegal states unrepresentable)
+
+---
+
+### MISU (advanced)
+
+    [lang=fs]
+    module Bitmap =
+        type Rgb32BitmapData = | Rgb32BitmapData of BitmapData
+
+        let lockBits (lockMode: ImageLockMode) (func: Rgb32BitmapData -> 'a) (bitmap: Bitmap) =
+            let width, height = bitmap.Width, bitmap.Height
+            let rect = Rectangle(0, 0, width, height)
+            let data = bitmap.LockBits(rect, lockMode, PixelFormat.Format32bppRgb)
+            try
+                func (Rgb32BitmapData data)
+            finally
+                bitmap.UnlockBits(data)
+
+        let setPhysicalPixels (data: Rgb32BitmapData) row (vector: int32[]) =
+            // no assert or exceptions thrown, compiler does the format checking
+            match data with
+            | Rgb32BitmapData bdata ->
+                let pointer = bdata |> physicalRowAddress row
+                Marshal.Copy(vector, 0, pointer, vector.Length)
+
+***
+
+### Hey, but what about dithering for a change?
+
+***
+
 ### Dithering
 
 > **Dither**: is an intentionally applied form of noise used to randomize quantization error, preventing large-scale patterns such as color banding in images.
@@ -1022,214 +1301,11 @@ Like `fold` as it has state, but also yields state on every item:
 
 ***
 
-    [lang=fs]
-    open System.IO
-    open System.Diagnostics
-
-    [<AutoOpen>]
-    module Tools =
-        #if INTERACTIVE
-        let root = __SOURCE_DIRECTORY__
-        #else
-        let root = "."
-        #endif
-
-        let timeit name func arg =
-            let timer = Stopwatch.StartNew()
-            let result = func arg
-            timer.Stop()
-            printfn "%s: %f" name timer.Elapsed.TotalMilliseconds
-            result
-
-        let resolvePath path = Path.Combine(root, path)
-
-***
-
-    [lang=fs]
-    module UI =
-        open System.Drawing
-        open System.Threading
-        open System.Windows.Forms
-
-        type ViewerForm() as form =
-            inherit Form(TopMost = true)
-
-            let viewer = 
-                new PictureBox(
-                    Dock = DockStyle.Fill, 
-                    SizeMode = PictureBoxSizeMode.Zoom)
-
-            do form.Controls.Add(viewer)
-
-            member form.LoadImage (title, image) = 
-                form.Text <- title
-                viewer.Image <- image
-                form.AdjustSize image.Size
-
-            member form.NextImage =
-                form.KeyPress
-                |> Event.filter (fun e -> e.KeyChar = ' ')
-                |> Event.map (fun _ -> form)
+### Value and Pixel
 
 ---
 
-    [lang=fs]
-    module UI =
-        type ViewerForm() as form =
-            member private form.AdjustSize clientSize =
-                let screenRect = Screen.FromControl(form).WorkingArea
-                let formMargin = 
-                    Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
-                let maximumClientSize = 
-                    Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
-
-                let ratioX = float maximumClientSize.Width / float clientSize.Width
-                let ratioY = float maximumClientSize.Height / float clientSize.Height
-                let ratio = min ratioX ratioY
-                let clientX = float clientSize.Width * ratio |> round |> int
-                let clientY = float clientSize.Height * ratio |> round |> int
-                let originX = (screenRect.Left + screenRect.Width - clientX - formMargin.Width) / 2
-                let originY = (screenRect.Top + screenRect.Height - clientY - formMargin.Height) / 2
-
-                form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
-
----
-
-    [lang=fs]
-    module UI =
-        let private show (setup: ViewerForm -> unit) =
-            let action () = 
-                let form = new ViewerForm()
-                setup form
-                Application.Run(form)
-            Thread(action, IsBackground = true).Start()
-
-        let showOne title image =
-            show (fun f ->
-                f.NextImage |> Event.add (fun _ -> f.Close())
-                f.LoadImage(title, image)
-            )
-
-        let showMany (images: (string * #Image) seq) =
-            let images = images.GetEnumerator()
-            show (fun f ->
-                let nextImage () = 
-                    match images.MoveNext() with
-                    | true -> images.Current |> f.LoadImage
-                    | _ -> f.Close()
-                f.NextImage |> Event.add (fun _ -> nextImage ())
-                nextImage ()
-            )
-
----
-
-I didn't like 3-line `action ()` in `show (...)`, so from:
-
-    [lang=fs]
-    let private show (setup: ViewerForm -> unit) =
-        let action () = 
-            let form = new ViewerForm()
-            setup form
-            Application.Run(form)
-        Thread(action, IsBackground = true).Start()
-
-it became:
-
-    [lang=fs]
-    let private show (setup: ViewerForm -> unit) =
-        let inline apply func arg = func arg; arg
-        let action () = Application.Run(new ViewerForm() |> apply setup)
-        Thread(action, IsBackground = true).Start()
-
-(**NOTE:** `apply`, `Array.Sort(...)` and `.Do(...)`)
-
----
-
-actually, for interactive session:
-
-    [lang=fs]
-    #if INTERACTIVE
-    let private show (setup: ViewerForm -> unit) =
-        let inline apply func arg = func arg; arg
-        (new ViewerForm() |> apply setup).Show()
-    #else
-    // ...
-    #endif
-
----
-
-    [lang=fs]
-    open System.Drawing
-    open System.Drawing.Imaging
-    open System.Runtime.InteropServices
-
-    module Bitmap =
-        let bitmapFormat = PixelFormat.Format32bppRgb
-
-        let private enforceFormat (image: Image) =
-            match image with
-            | :? Bitmap as bitmap when bitmap.PixelFormat = bitmapFormat ->
-                bitmap
-            | _ ->
-                let width, height = image.Width, image.Height
-                let bitmap = new Bitmap(width, height, bitmapFormat)
-                use graphics = Graphics.FromImage(bitmap)
-                graphics.DrawImage(image, 0, 0, width, height)
-                bitmap
-
-        let load (fileName: string) = 
-            let fileName = Tools.resolvePath fileName
-            fileName |> Image.FromFile |> enforceFormat
-            
-(**NOTE:** bait-and-switch and shadowing)
-
----
-
-at this point we can show some pictures:
-
-    [lang=fs]
-    #load "load-project.fsx"
-    open FsDither
-
-    "lena.jpg" |> Bitmap.load |> UI.showOne "lena"
-    ["lena.jpg"; "david.jpg"] |> Seq.iter (fun fn -> fn |> Bitmap.load |> UI.showOne fn)
-    ["lena.jpg"; "david.jpg"] |> Seq.map (fun fn -> (fn, fn |> Bitmap.load)) |> UI.ahowMany
-
----
-
-    [lang=fs]
-    module Bitmap =
-        let lockBits (lockMode: ImageLockMode) (func: BitmapData -> 'a) (bitmap: Bitmap) =
-            let width, height = bitmap.Width, bitmap.Height
-            let rect = Rectangle(0, 0, width, height)
-            let data = bitmap.LockBits(rect, lockMode, bitmapFormat)
-            try
-                func data
-            finally
-                bitmap.UnlockBits(data)
-
-        let inline private physicalRowAddress line (data: BitmapData) = 
-            data.Scan0 + nativeint (data.Stride * line)
-
-        let getPhysicalPixels (data: BitmapData) row =
-            assert (data.PixelFormat = bitmapFormat)
-            let width = data.Width
-            let buffer = Array.zeroCreate<int32> width
-            let pointer = data |> physicalRowAddress row
-            Marshal.Copy(pointer, buffer, 0, buffer.Length)
-            buffer
-
-        let setPhysicalPixels (data: BitmapData) row (vector: int32[]) =
-            assert (data.PixelFormat = bitmapFormat)
-            assert (data.Width = vector.Length)
-            let pointer = data |> physicalRowAddress row
-            Marshal.Copy(vector, 0, pointer, vector.Length)
-
-***
-
-### Let's get started...
-
-***
+A `Value` representing color compound:
 
     [lang=fs]
     module Value =
@@ -1239,6 +1315,8 @@ at this point we can show some pictures:
         let inline toByte v = (v |> min 1.0 |> max 0.0) * 255.0 |> round |> int
         
 ---
+
+A bare `Pixel` struct:
 
     [lang=fs]
     module Pixel =
@@ -1251,6 +1329,12 @@ at this point we can show some pictures:
             val b: Value
             new(r, g, b) = { r = r; g = g; b = b }
 
+---
+
+Conversion to and from `Int32`:
+
+    [lang=fs]
+    module Pixel =
         let inline fromInt32 physical =
             let inline toValue o v = v >>> o |> Value.fromByte
             Pixel(toValue 16 physical, toValue 8 physical, toValue 0 physical)
@@ -1259,28 +1343,41 @@ at this point we can show some pictures:
             let inline toByte o v = v |> Value.toByte <<< o
             (toByte 16 logical.r) ||| (toByte 8 logical.g) ||| (toByte 0 logical.b)
 
+---
+
+Conversion to and from grayscale and access to members as functions:
+
+    [lang=fs]
+    module Pixel =
+        let inline getL (pixel: Pixel) = 0.2126*pixel.r + 0.7152*pixel.g + 0.0722*pixel.b
         let inline fromL (l: Value) = Pixel(l, l, l)
 
         let inline getR (pixel: Pixel) = pixel.r
         let inline getG (pixel: Pixel) = pixel.g
         let inline getB (pixel: Pixel) = pixel.b
-        let inline getL (pixel: Pixel) = 0.2126*pixel.r + 0.7152*pixel.g + 0.0722*pixel.b
+
+***
+
+### Seq and Range
 
 ---
-    
-Let's add parallel-iter (`piter`) to `Seq` module...
+
+As we would like to do as much as possible in parallel 
+let's preemptively add parallel-iter (`piter`) to `Seq` module...
 
     [lang=fs]
     module Seq =
         let inline piter func (s: 'a seq) = 
             Parallel.ForEach(s, Action<'a>(func)) |> ignore
-            
+
 ---
 
-...and define a `Range` module for pseudo-sequence `{lo..hi}`
+...and define a `Range` module for pseudo-sequence `{lo..hi}` with `iter` and `fold`:
 
     [lang=fs]
     module Range =
+        type Range = (int * int)
+
         let inline iter func (lo, hi) = 
             // { lo..hi } |> Seq.iter func
             for i = lo to hi do func i
@@ -1288,6 +1385,124 @@ Let's add parallel-iter (`piter`) to `Seq` module...
         let inline piter func (lo, hi) =
             // { lo..hi } |> Seq.piter func
             Parallel.For(lo, hi + 1, Action<int>(func)) |> ignore
+
+        let inline fold func state (lo, hi) =
+            // { lo..hi } |> Seq.fold func state
+            let mutable s = state
+            for i = lo to hi do s <- func i s
+            s
+
+***
+
+### Matrix
+
+See **Math.NET Numerics** for better matrices
+
+http://numerics.mathdotnet.com/
+
+---
+
+Let's define `Matrix` module for matrix operations...
+
+    [lang=fs]
+    module Matrix = // Array@d
+        let inline zeroCreate height width = Array2D.zeroCreate height width
+        let inline init height width func = Array2D.init height width func
+        let inline map func matrix = Array2D.map func matrix
+        let inline mapi func matrix = Array2D.mapi func matrix
+
+        let inline widthOf matrix = Array2D.length2 matrix
+        let inline heightOf matrix = Array2D.length1 matrix
+        let inline sizeOf matrix = heightOf matrix, widthOf matrix
+
+(**Note**: Array@d, length2)
+
+---
+
+...and some parallel versions of `init`, `map` and `mapi`...
+
+    [lang=fs]
+    module Matrix =
+        let pinit height width func =
+            let result = zeroCreate height width
+            let inline initPixel y x = result.[y, x] <- func y x
+            let inline initRow row = for x = 0 to width - 1 do initPixel row x
+            (0, height - 1) |> Range.piter initRow
+            result
+
+        let pmap func matrix =
+            let height, width = matrix |> sizeOf
+            let inline processPixel y x = func matrix.[y, x]
+            pinit height width processPixel
+
+        let pmapi func matrix =
+            let height, width = matrix |> sizeOf
+            let inline processPixel y x = func y x matrix.[y, x]
+            pinit height width processPixel
+
+---
+
+Before we do some benchmarking let's define `timeit` operator:
+
+    [lang=fs]
+    module Debug =
+        open System.Diagnostics
+
+        let timeit name func arg = 
+            let timer = Stopwatch.StartNew()
+            let result = func arg
+            timer.Stop()
+            printfn "%s: %gms" name timer.Elapsed.TotalMilliseconds
+            result
+
+        let inline timeit0 name func = timeit name func () |> ignore
+
+---
+
+...and now, we can do some benchmarks to justify parallel versions:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let blue = Pixel.Pixel(0.0, 0.0, 1.0)
+    let using func = fun () -> func 4000 4000 (fun y x -> blue)
+
+    Debug.timeit0 "init" (using Matrix.init)
+    Debug.timeit0 "pinit" (using Matrix.pinit)
+
+    // init: 246.565200ms
+    // pinit: 88.467200ms
+
+---
+
+...let's add some friendly slicing...
+
+    [lang=fs]
+    module Matrix =
+        let inline blitRowToVector (matrix: 'a[,]) row column (array: 'a[]) index length =
+            let inline clone i = array.[index + i] <- matrix.[row, column + i] 
+            for i = 0 to length - 1 do clone i
+
+        let inline blitVectorToRow (vector: 'a[]) index (matrix: 'a[,]) row column length =
+            let inline clone i = matrix.[row, column + i] <- vector.[index + i]
+            for i = 0 to length - 1 do clone i
+
+        let applyRow matrix row vector =
+            let matrixWidth = matrix |> widthOf
+            let vectorLength = vector |> Array.length
+            let length = min matrixWidth vectorLength
+            blitVectorToRow vector 0 matrix row 0 length
+
+        let extractRow matrix row =
+            let length = matrix |> widthOf
+            let vector = Array.zeroCreate length
+            blitRowToVector matrix row 0 vector 0 length
+            vector
+
+***
+
+### Picture
 
 ---
 
@@ -1300,6 +1515,8 @@ Technically `Picture` is just `Pixel[,]`:
     module Picture = 
         open Value
         open Pixel
+
+        type Picture = Pixel[,]
 
         let fromBitmap (bitmap: Bitmap) =
             let width, height = bitmap.Width, bitmap.Height
@@ -1319,26 +1536,447 @@ Technically `Picture` is just `Pixel[,]`:
 
 ---
 
+Let's see what we have :
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let typeof x = x.GetType()
+    "lena.jpg" |> Picture.load |> typeof |> printfn "%A"
+
+    // FsDither.Pixel+Pixel[,]
+
+---
+
+To convert back to `Bitmap`:
+
     [lang=fs]
     module Picture = 
-        let toBitmap matrix =
-            let height, width = matrix |> Matrix.sizeOf
+        let toBitmap picture =
+            let height, width = picture |> Matrix.sizeOf
             let bitmap = new Bitmap(width, height, Bitmap.bitmapFormat)
 
             let inline cloneRow data row = 
-                Matrix.extractRow matrix row
+                Matrix.extractRow picture row
                 |> Array.map Pixel.toInt32
                 |> Bitmap.setPhysicalPixels data row
 
             bitmap |> Bitmap.lockBits ImageLockMode.WriteOnly (fun data ->
-                (0, height - 1) |> ISeq.piter (cloneRow data))
+                (0, height - 1) |> Range.piter (cloneRow data))
             bitmap
 
+(**Note**: spot the spot for apply)
+
+---
+
+Let's check, if we can convert `Pixel[,]` to `Bitmap`:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let ratio v t = float v / float t
+    let gradient h w y x = Pixel.Pixel(ratio y h, 0.0, ratio x w)
+    Matrix.pinit 200 200 (gradient 200 200) |> Picture.toBitmap |> UI.showOne "gradient"
+
+---
+
+To avoid explicit calls to this conversion let's mirror `UI.showOne` and `UI.showMany`:
+
+    [lang=fs]
+    module Picture = 
         let showOne title picture = 
             picture |> toBitmap |> UI.showOne title
 
         let showMany pictures =
             pictures |> Seq.map (fun (t, p) -> t, p |> toBitmap) |> UI.showMany
+
+---
+
+
+
+***
+
+### Treshold
+
+---
+
+We will need quantizer:
+
+    [lang=fs]
+    module Value =
+        let quantize n = 
+            let q = 1.0 / float (n - 1) 
+            fun v -> round (v / q) * q |> max 0.0 |> min 1.0
+
+---
+
+We will be working mostly with grayscale images, so we need conversion:
+
+    [lang=fs]
+    module Picture =
+        let toGrayscale picture = picture |> Matrix.pmap Pixel.getL
+        let fromGrayscale layer = layer |> Matrix.pmap Pixel.fromL
+
+---
+
+So, 'Treshold' processor has almost no implementation at all:
+
+    [lang=fs]
+    module Treshold = 
+        let processLayer quantize layer =
+            layer |> Matrix.pmap quantize
+
+---
+
+So, let's see:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    "flowers-large.jpg"
+    |> Picture.load 
+    |> Picture.toGrayscale 
+    |> Treshold.processLayer (Value.quantize 2) 
+    |> Picture.fromGrayscale 
+    |> Picture.showOne "treshold"
+
+---
+
+...or maybe a little bit more fancy:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    seq {
+        let lena = "lena.jpg" |> Picture.load
+        yield "color", lena
+
+        let grayscale = lena |> Picture.toGrayscale
+        yield "greyscale", grayscale |> Picture.fromGrayscale
+
+        for n = 2 to 16 do
+            let title = sprintf "treshold: %d" n
+            let image = 
+                grayscale 
+                |> Treshold.processLayer (Value.quantize n) 
+                |> Picture.fromGrayscale
+            yield title, image
+    } |> Picture.showMany
+
+***
+
+### Random
+
+---
+
+Random dithering just adds random noise:
+
+    [lang=fs]
+    module Random = 
+        open System
+
+        let processLayer amplify quantize layer =
+            let rng = Random()
+            let inline gen () = rng.NextDouble() - 0.5
+            let processPixel v = v + gen () * amplify |> quantize
+            layer |> Matrix.map processPixel
+
+(**Note**: not parallel)
+
+---
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    "flowers-large.jpg"
+    |> Picture.load 
+    |> Picture.toGrayscale 
+    |> Random.processLayer 1.0 (Value.quantize 2) 
+    |> Picture.fromGrayscale 
+    |> Picture.showOne "treshold"
+
+(**Note**: what it would be if `amplify` was set to 0.0?)
+
+***
+
+### Bayer
+
+http://en.wikipedia.org/wiki/Ordered_dithering
+
+---
+
+Bayer uses adjustment matrices:
+
+    [lang=fs]
+    module Bayer =
+        let private createMatrix m = 
+            let m = m |> array2D
+            let w, h = Matrix.sizeOf m
+            let area = w * h
+            m |> Matrix.pmap (fun v -> float v / float (area + 1) - 0.5)
+
+        let bayer2x2 = [ [1; 3]; [4; 2] ] |> createMatrix
+        let bayer3x3 = [ [3; 7; 4]; [6; 1; 9]; [2; 8; 5] ] |> createMatrix
+        let bayer4x4 = [ [1; 9; 3; 11]; [13; 5; 15; 7]; [4; 12; 2; 10]; [16; 8; 14; 6] ] |> createMatrix
+        let bayer8x8 = 
+            [
+                [1; 49; 13; 61; 4; 52; 16; 64]
+                [33; 17; 45; 29; 36; 20; 48; 32]
+                [9; 57; 5; 53; 12; 60; 8; 56]
+                [41; 25; 37; 21; 44; 28; 40; 24]
+                [3; 51; 15; 63; 2; 50; 14; 62]
+                [35; 19; 47; 31; 34; 18; 46; 30]
+                [11; 59; 7; 55; 10; 58; 6; 54]
+                [43; 27; 39; 23; 42; 26; 38; 22] 
+            ] |> createMatrix
+
+---
+
+...and correction applied to every pixel is read from this pregenerated matrix:
+
+    [lang=fs]
+    module Bayer =
+        let inline processLayer matrix quantize layer =
+            let height, width = matrix |> Matrix.sizeOf
+            let inline processPixel y x v = v + matrix.[y % height, x % width] |> quantize
+            layer |> Matrix.pmapi processPixel
+
+---
+
+To avoid repetition let's implement dithering-dedicated slideshow:
+
+    [lang=fs]
+    module Picture = 
+        let quickGrayscaleSlides algorithms picture =
+            let greyscale = picture |> toGrayscale
+            seq {
+                for title, func in algorithms do
+                    let image = greyscale |> func |> fromGrayscale
+                    yield title, image
+            } |> showMany
+
+---
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let quantize = Value.quantize 2
+
+    "flowers-large.jpg"
+    |> Picture.load
+    |> Picture.quickGrayscaleSlides [
+        "none", id
+        "treshold", Treshold.processLayer quantize
+        "random", Random.processLayer quantize
+        "bayer2", Bayer.processLayer Bayer.bayer2x2 quantize
+        "bayer3", Bayer.processLayer Bayer.bayer3x3 quantize
+        "bayer4", Bayer.processLayer Bayer.bayer4x4 quantize
+        "bayer8", Bayer.processLayer Bayer.bayer8x8 quantize
+    ]
+
+***
+
+Floyd-Steinberg
+
+http://en.wikipedia.org/wiki/Floyd-Steinberg_dithering
+
+---
+
+The problem with Bayer is the fact that even if color was selected perfectly surrounding pixels don't know about it and pattern is applied regardless:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    "flowers-large.jpg"
+    |> Picture.load
+    |> Picture.quickGrayscaleSlides [
+        "treshold2", Treshold.processLayer (Value.quantize 2)
+        "bayer2", Bayer.processLayer Bayer.bayer8x8 (Value.quantize 2)
+        "treshold256", Treshold.processLayer (Value.quantize 256)
+        "bayer256", Bayer.processLayer Bayer.bayer8x8 (Value.quantize 256)
+    ]
+
+---
+
+**Answer**: error diffusion
+
+![diffuse](images/diffuse.png)
+
+---
+
+    [lang=fs]
+    module FloydSteinberg =
+        open Value
+
+        let processLayer quantize input =
+            let height, width = Matrix.sizeOf input
+            let output = Matrix.zeroCreate height width
+            let yH = height - 1
+
+            let inline processRow y (cy0: Value[]) =
+                // ...
+
+            // let mutable cy = Array.zeroCreate (width + 2)
+            // for y = 0 to yH do cy <- processRow y cy
+            let cy0 = Array.zeroCreate (width + 2)
+            (0, yH) |> Range.fold processRow cy0 |> ignore
+
+            output
+
+---
+
+    [lang=fs]
+    module FloydSteinberg =
+        open Value
+
+        let processLayer quantize input =
+            // ...
+            let inline processRow y (cy0: Value[]) =
+                let cy1 = Array.zeroCreate (width + 2)
+                let xW = width - 1
+
+                let inline calculateValue x c = 
+                    let expected = input.[y, x] + cy0.[x + 1] + c
+                    let actual = quantize expected
+                    output.[y, x] <- actual
+                    expected - actual
+
+                let inline diffuseError x error =
+                    let error' = error / 16.0
+                    let inline diffuseDown x error ratio = 
+                        cy1.[x + 1] <- cy1.[x + 1] + error * ratio
+                    diffuseDown (x - 1) error' 3.0
+                    diffuseDown x error' 5.0
+                    diffuseDown (x + 1) error' 1.0
+                    error' * 7.0
+
+                let inline processPixel x c = 
+                    c |> calculateValue x |> diffuseError x
+
+                // let mutable c = 0.0
+                // for x = 0 to xW do c <- processPixel x c
+                (0, xW) |> Range.fold processPixel 0.0 |> ignore
+
+                cy1
+            // ...
+
+---
+
+The effect?
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let quantize = Value.quantize 2
+
+    "flowers-large.jpg" 
+    |> Picture.load
+    |> Picture.quickGrayscaleSlides [
+        "none", id
+        "treshold", Treshold.processLayer quantize
+        "random", Random.processLayer 1.0 quantize
+        "bayer8", Bayer.processLayer Bayer.bayer8x8 quantize
+        "floyd", FloydSteinberg.processLayer quantize
+    ]
+
+(**Note**: try 4, 8, 16)
+
+---
+
+Actually we can use dithering on each channel separately.
+Let's start with map/reduce for 3-item-tuple:
+
+    [lang=fs]
+    module Triplet =
+        let inline map f (a, b, c) = (f a, f b, f c)
+        let inline reduce f (a, b, c) = a |> f b |> f c
+
+---
+
+    [lang=fs]
+    module Picture = 
+        let split (picture: Pixel[,]) =
+            (Pixel.getR, Pixel.getG, Pixel.getB) 
+            |> Triplet.map (fun f -> Matrix.pmap f picture)
+
+        let join ((red: Value[,], green: Value[,], blue: Value[,]) as layers) =
+            let width = layers |> Triplet.map Matrix.widthOf |> Triplet.reduce min
+            let height = layers |> Triplet.map Matrix.heightOf |> Triplet.reduce min
+            let inline combine y x = Pixel(red.[y, x], green.[y, x], blue.[y, x])
+            Matrix.pinit height width combine
+---
+
+Now we can apply Floyd-Steinberg to 3 channels:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let image = "flowers-large.jpg" |> Picture.load 
+    let quant = Value.quantize 4
+    let floyd = FloydSteinberg.processLayer quant
+
+    image
+    |> Picture.toGrayscale 
+    |> floyd
+    |> Picture.fromGrayscale 
+    |> Picture.showOne "grayscale4"
+
+    image
+    |> Picture.split
+    |> Triplet.map floyd
+    |> Picture.join
+    |> Picture.showOne "color4"
+
+---
+
+Floyd-Steinberg is not parallel algorithm, but at least we can apply it to 3 channels in parallel:
+
+    [lang=fs]
+    module Triplet =
+        let inline pmap f (a, b, c) =
+            match [|a; b; c|] |> Array.Parallel.map f with 
+            | [|a; b; c|] -> (a, b, c) 
+            | _ -> failwith "Not going to happen"
+
+---
+
+Let's see:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let image = "flowers-large.jpg" |> Picture.load 
+    let quant = Value.quantize 4
+    let floyd = FloydSteinberg.processLayer quant
+
+    image
+    |> Picture.split
+    |> Debug.timeit "map" (Triplet.map floyd)
+    |> Picture.join
+    |> Picture.showOne "map"
+
+    image
+    |> Picture.split
+    |> Debug.timeit "pmap" (Triplet.pmap floyd)
+    |> Picture.join
+    |> Picture.showOne "pmap"
+
+    // map: 67.0074ms
+    // pmap: 28.1844ms
+
+---
+
+---
 
 
 ***

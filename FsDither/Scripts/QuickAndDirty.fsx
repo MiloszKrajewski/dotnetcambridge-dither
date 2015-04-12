@@ -1,7 +1,18 @@
-﻿let countDown = 
-    10 
-    |> Seq.unfold (fun s -> if s < 0 then None else Some (string s, s - 1)) 
-    |> Seq.toList
+﻿#load "init.fsx"
+open FsDither
 
-// unfold: ["10"; "9"; "8"; "7"; "6"; "5"; "4"; "3"; "2"; "1"; "0"]
-printfn "unfold: %A" countDown
+let image = "flowers-large.jpg" |> Picture.load 
+let quant = Value.quantize 4
+let floyd = FloydSteinberg.processLayer quant
+
+image
+|> Picture.split
+|> Debug.timeit "map" (Triplet.map floyd)
+|> Picture.join
+|> Picture.showOne "map"
+
+image
+|> Picture.split
+|> Debug.timeit "pmap" (Triplet.pmap floyd)
+|> Picture.join
+|> Picture.showOne "pmap"
