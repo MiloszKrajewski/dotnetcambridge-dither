@@ -1,18 +1,16 @@
-﻿#load "init.fsx"
-open FsDither
+﻿open System
 
-let image = "flowers-large.jpg" |> Picture.load 
-let quant = Value.quantize 4
-let floyd = FloydSteinberg.processLayer quant
-
-image
-|> Picture.split
-|> Debug.timeit "map" (Triplet.map floyd)
-|> Picture.join
-|> Picture.showOne "map"
-
-image
-|> Picture.split
-|> Debug.timeit "pmap" (Triplet.pmap floyd)
-|> Picture.join
-|> Picture.showOne "pmap"
+/// retries given action; 
+/// returns its result or throws exception
+/// after `countLimit` failures or when `timeLimit` expires
+let retry countLimit timeLimit func arg =
+    let timeLimit = DateTime.Now.Add(TimeSpan.FromSeconds(timeLimit))
+    let rec retry count =
+        try 
+            func arg 
+        with 
+        | _ when (count <= countLimit && DateTime.Now <= timeLimit) -> 
+            retry (count + 1)
+        | _ -> 
+            failwith "Operation failed"
+    retry 0

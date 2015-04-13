@@ -81,7 +81,6 @@ module FloydSteinberg =
 
 module PFloydSteinberg = 
     open Value
-    open System
 
     type internal Patch = { XC: int; Y0: int; Width: int; Height: int }
 

@@ -1,7 +1,14 @@
 ﻿namespace FsDither
 
 module Debug =
+    open System.IO
     open System.Diagnostics
+
+    #if INTERACTIVE
+    let fixPath path = Path.Combine(__SOURCE_DIRECTORY__, path)
+    #else
+    let inline fixPath path = path
+    #endif
 
     let timeit name func arg = 
         let timer = Stopwatch.StartNew()

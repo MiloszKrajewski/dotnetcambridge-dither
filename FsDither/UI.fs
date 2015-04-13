@@ -26,21 +26,24 @@ module UI =
             |> Event.map (fun _ -> form)
 
         member private form.AdjustSize clientSize =
-            let screenRect = Screen.FromControl(form).WorkingArea
-            let formMargin = 
-                Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
-            let maximumClientSize = 
-                Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
+            let inline sizeDiff (a: Size) (b: Size) = 
+                Size(a.Width - b.Width, a.Height - b.Height)
+            let inline sizeRatios (a: Size) (b: Size) =
+                float a.Width / float b.Width, float a.Height / float b.Height
 
-            let ratioX = float maximumClientSize.Width / float clientSize.Width
-            let ratioY = float maximumClientSize.Height / float clientSize.Height
+            let screenRect = Screen.FromControl(form).WorkingArea
+            let formMargin = sizeDiff form.Size form.ClientSize
+            let maximumClientSize = sizeDiff screenRect.Size formMargin
+            let ratioX, ratioY = sizeRatios maximumClientSize clientSize
             let ratio = min ratioX ratioY
             let clientX = float clientSize.Width * ratio |> round |> int
             let clientY = float clientSize.Height * ratio |> round |> int
-            let originX = (screenRect.Left + screenRect.Width - clientX - formMargin.Width) / 2
-            let originY = (screenRect.Top + screenRect.Height - clientY - formMargin.Height) / 2
+            let originX = (screenRect.Right - clientX - formMargin.Width) / 2
+            let originY = (screenRect.Bottom - clientY - formMargin.Height) / 2
 
-            form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
+            form.SetBounds(
+                originX, originY, 
+                clientX + formMargin.Width, clientY + formMargin.Height)
 
     #if CONSOLE
     let private showForm factory = 

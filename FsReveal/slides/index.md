@@ -13,6 +13,10 @@
 
 ## ...and Knuth
 
+---
+
+https://github.com/MiloszKrajewski/dotnetcambridge-dither
+
 ***
 
 ### About me
@@ -21,9 +25,11 @@
 - BLOBAs @ Sepura
 - first line of code written in ~1984
 - C, C++, C#, SQL
-- Python, F#
+- (Iron)Python, F#
 
 ---
+
+### Background
 
 - Algorithms
 - Data Structures
@@ -33,6 +39,8 @@
 
 ---
 
+### Most recently
+
 - Parallel
 - Distributed
 - Reactive
@@ -40,15 +48,17 @@
 
 ***
 
-### Definite statements
+> A physicist and a mathematician setting in a faculty lounge. Suddenly, the coffee machine catches on fire. The physicist grabs a bucket and leaps towards the sink, fills the bucket with water and puts out the fire. The second day, the same two sit in the same lounge. Again, the coffee machine catches on fire. This time, the mathematician stands up, gets a bucket, hands the bucket to the physicist, thus reducing the problem to a previously solved one.
+
+---
 
 > All generalizations are false, including this one. -- **Mark Twain**
 
 ---
 
-### Turning completeness and equivalence
+> It is not about what is possible, it is about what is natural.
 
-It is not about what is possible, it is about what is natural.
+(**Note**: they are all Turing complete anyway)
 
 ***
 
@@ -57,8 +67,8 @@ It is not about what is possible, it is about what is natural.
 - explain basic concepts about F#
 - solve non-trivial problem using F#
 - use idiomatic F#
-- use non-idiomatic F# when beneficial
 - prove Donald Knuth wrong (kind of)
+- use non-idiomatic F# when beneficial
 
 ---
 
@@ -66,7 +76,7 @@ It is not about what is possible, it is about what is natural.
 
 - Discriminated unions
 - Active patterns
-- Async monad
+- Async
 - Monads
 
 ***
@@ -146,7 +156,7 @@ If you like those features in C#:
 - Generics
 - Nullables
 - Iterators (`yield`)
-- Implicit types and type inference (`var` and `X<T>`)
+- Implicit types and type inference (`var` and `Tuple.Create`)
 - Lambda functions
 - Asynchronous (`async` and `await`)
 - Linq / extension methods
@@ -155,11 +165,11 @@ F# is for you.
 
 ***
 
-### F# is
+### F# is about (for me)
 
 - Low ceremony, low noise
 - Visually honest
-- Strongly typed with type inference and automatic generalization
+- Strongly typed, type inference, automatic generalization
 - Expression orientated
 - Pattern matching
 - Functional
@@ -232,11 +242,20 @@ while in F# it would be:
         member x.Id = id
         member x.Name = name
         member x.Age = age
-        override x.ToString() = sprintf "Person(Name: \"%s\", Age: %d)" name age
+        override x.ToString() = 
+            sprintf "Person(Name: \"%s\", Age: %d)" name age
+
+(**Note**: types? anyone for a bet?)
 
 ---
 
 ![HelloWorld.java](images/hellojava.png)
+
+---
+
+Venkat Subramaniam - Scala for the Intrigued @ 35min
+
+https://www.youtube.com/watch?v=grvvKURwGNg
 
 ***
 
@@ -296,6 +315,12 @@ And this one?
        y = y * 2;
     Console.WriteLine("{0},{1}", x, y);
 
+---
+
+Kevlin Henney - Seven Ineffective Coding Habits of Many Programmers
+
+https://vimeo.com/97329157
+
 ***
 
 #### Strongly typed with type inference (and automatic generalization)
@@ -314,18 +339,22 @@ It's like `var` but everywhere:
     [lang=fs]
     open System
 
-    /// retries given action
+    /// retries given action; 
     /// returns its result or throws exception
     /// after `countLimit` failures or when `timeLimit` expires
     let retry countLimit timeLimit func arg =
         let timeLimit = DateTime.Now.Add(TimeSpan.FromSeconds(timeLimit))
         let rec retry count =
-            match count, DateTime.Now with
-            | c, t when (c > 0) && (c > countLimit || t > timeLimit) ->
+            try 
+                func arg 
+            with 
+            | _ when (count <= countLimit && DateTime.Now <= timeLimit) -> 
+                retry (count + 1)
+            | _ -> 
                 failwith "Operation failed"
-            | c, _ ->
-                try func arg with | _ -> retry (c + 1)
         retry 0
+
+(**Note**: copy-paste, and inspect types of things, remove `FromSeconds(...)`)
 
 ***
 
@@ -378,7 +407,7 @@ In F# `match` is an expression
 
 ---
 
-in C# it get's messy when variable is of some complex type:
+in C# it gets messy when variable is of some complex type:
 
     [lang=cs]
     IEnumerable<IGrouping<int, Tuple<string, IEnumerable<double>>> result;
@@ -820,10 +849,12 @@ is equivalent to:
 
 ---
 
-#### sum
+#### sum (or concat)
 
     [lang=fs]
     values |> Seq.reduce (+)
+    values |> Seq.reduce (fun x y -> x + y)
+
 
 ---
 
@@ -832,12 +863,15 @@ is equivalent to:
     [lang=fs]
     // { 2..n } = seq { for i = 2 to n do yield i }
     { 2..n } |> Seq.reduce (*)
+    { 2..n } |> Seq.reduce (fun x y -> x * y)
 
 ---
 
 #### min
 
     [lang=fs]
+    values |> Seq.reduce min
+    values |> Seq.reduce (fun a b -> min a b)
     values |> Seq.reduce (fun a b -> if a <= b then a else b)
 
 ---
@@ -871,6 +905,8 @@ is equivalent to:
 ![fold](images/fold.png)
 
 ---
+
+`fold` is like `reduce` (or `reduce` is-a `fold`) but allows to separate input type from output type:
 
     [lang=fs]
     let reduce =
@@ -956,9 +992,15 @@ Like `fold` as it has state, but also yields state on every item:
 
 ***
 
-### Your first zip/fold/scan
+### Your first zip/scan
 
 ![your first scan](images/your-first-scan.jpg)
+
+- zip sequences (create digit pairs)
+- start with carry = 0
+- add digits in pairs (plus carry)
+- emit sum % 10
+- carry sum / 10
 
 ***
 
@@ -982,7 +1024,7 @@ Like `fold` as it has state, but also yields state on every item:
 
 ***
 
-### Everything* is unfold/filter/map/fold
+### Everything is unfold/filter/map/fold
 
     [lang=fs]
     let csvToXml fileName =
@@ -993,7 +1035,9 @@ Like `fold` as it has state, but also yields state on every item:
         |> Seq.filter isValidPerson
         |> Seq.fold addToXml (XmlDocument())
 
-*actually, everything is `.SelectMany(...)`
+(**Note**: actually, everything is `.SelectMany(...)`, `flatMap` and `collect`)
+
+[Bart De Smet: MinLINQ](http://channel9.msdn.com/Shows/Going+Deep/Bart-De-Smet-MinLINQ-The-Essence-of-LINQ)
 
 ***
 
@@ -1044,21 +1088,24 @@ Like `fold` as it has state, but also yields state on every item:
     module UI =
         type ViewerForm() as form =
             member private form.AdjustSize clientSize =
-                let screenRect = Screen.FromControl(form).WorkingArea
-                let formMargin = 
-                    Size(form.Width - form.ClientSize.Width, form.Height - form.ClientSize.Height)
-                let maximumClientSize = 
-                    Size(screenRect.Width - formMargin.Width, screenRect.Height - formMargin.Height)
+                let inline sizeDiff (a: Size) (b: Size) = 
+                    Size(a.Width - b.Width, a.Height - b.Height)
+                let inline sizeRatios (a: Size) (b: Size) =
+                    float a.Width / float b.Width, float a.Height / float b.Height
 
-                let ratioX = float maximumClientSize.Width / float clientSize.Width
-                let ratioY = float maximumClientSize.Height / float clientSize.Height
+                let screenRect = Screen.FromControl(form).WorkingArea
+                let formMargin = sizeDiff form.Size form.ClientSize
+                let maximumClientSize = sizeDiff screenRect.Size formMargin
+                let ratioX, ratioY = sizeRatios maximumClientSize clientSize
                 let ratio = min ratioX ratioY
                 let clientX = float clientSize.Width * ratio |> round |> int
                 let clientY = float clientSize.Height * ratio |> round |> int
-                let originX = (screenRect.Left + screenRect.Width - clientX - formMargin.Width) / 2
-                let originY = (screenRect.Top + screenRect.Height - clientY - formMargin.Height) / 2
+                let originX = (screenRect.Right - clientX - formMargin.Width) / 2
+                let originY = (screenRect.Bottom - clientY - formMargin.Height) / 2
 
-                form.SetBounds(originX, originY, clientX + formMargin.Width, clientY + formMargin.Height)
+                form.SetBounds(
+                    originX, originY, 
+                    clientX + formMargin.Width, clientY + formMargin.Height)
 
 ---
 
@@ -1159,7 +1206,7 @@ To ceorce loaded bitmaps into right format:
 In F# interactive current folder is in Temp folder; we don't want to play with paths in out session, so let's introduce fixPath function:
 
     [lang=fs]
-    module Bitmap =
+    module Debug =
         #if INTERACTIVE
         let private fixPath path = System.IO.Path.Combine(__SOURCE_DIRECTORY__, path)
         #else
@@ -1171,8 +1218,7 @@ In F# interactive current folder is in Temp folder; we don't want to play with p
     [lang=fs]
     module Bitmap =
         let load (fileName: string) = 
-            fileName |> fixPath |> Image.FromFile |> enforceFormat
-
+            fileName |> Debug.fixPath |> Image.FromFile |> enforceFormat
 
 ---
 
@@ -1459,6 +1505,10 @@ Before we do some benchmarking let's define `timeit` operator:
 
 ---
 
+Change laptop's power management profile :-)
+
+---
+
 ...and now, we can do some benchmarks to justify parallel versions:
 
     [lang=fs]
@@ -1536,7 +1586,7 @@ Technically `Picture` is just `Pixel[,]`:
 
 ---
 
-Let's see what we have :
+Let's inspect the type of result:
 
     [lang=fs]
     #load "init.fsx"
@@ -1592,10 +1642,6 @@ To avoid explicit calls to this conversion let's mirror `UI.showOne` and `UI.sho
         let showMany pictures =
             pictures |> Seq.map (fun (t, p) -> t, p |> toBitmap) |> UI.showMany
 
----
-
-
-
 ***
 
 ### Treshold
@@ -1628,6 +1674,8 @@ So, 'Treshold' processor has almost no implementation at all:
         let processLayer quantize layer =
             layer |> Matrix.pmap quantize
 
+(**Note**: we can use `pmap`)
+
 ---
 
 So, let's see:
@@ -1652,10 +1700,10 @@ So, let's see:
     open FsDither
 
     seq {
-        let lena = "lena.jpg" |> Picture.load
-        yield "color", lena
+        let color = "flowers-large.jpg" |> Picture.load
+        yield "color", color
 
-        let grayscale = lena |> Picture.toGrayscale
+        let grayscale = color |> Picture.toGrayscale
         yield "greyscale", grayscale |> Picture.fromGrayscale
 
         for n = 2 to 16 do
@@ -1751,14 +1799,14 @@ Bayer uses adjustment matrices:
 To avoid repetition let's implement dithering-dedicated slideshow:
 
     [lang=fs]
-    module Picture = 
+    module Adhoc =
         let quickGrayscaleSlides algorithms picture =
-            let greyscale = picture |> toGrayscale
+            let greyscale = picture |> Picture.toGrayscale
             seq {
                 for title, func in algorithms do
-                    let image = greyscale |> func |> fromGrayscale
+                    let image = greyscale |> func |> Picture.fromGrayscale
                     yield title, image
-            } |> showMany
+            } |> Picture.showMany
 
 ---
 
@@ -1770,15 +1818,55 @@ To avoid repetition let's implement dithering-dedicated slideshow:
 
     "flowers-large.jpg"
     |> Picture.load
-    |> Picture.quickGrayscaleSlides [
+    |> Adhoc.quickGrayscaleSlides [
         "none", id
         "treshold", Treshold.processLayer quantize
-        "random", Random.processLayer quantize
+        "random", Random.processLayer 1.0 quantize
         "bayer2", Bayer.processLayer Bayer.bayer2x2 quantize
         "bayer3", Bayer.processLayer Bayer.bayer3x3 quantize
         "bayer4", Bayer.processLayer Bayer.bayer4x4 quantize
         "bayer8", Bayer.processLayer Bayer.bayer8x8 quantize
     ]
+
+---
+
+How long it would take to implement ASCII art generator?
+
+---
+
+Here it comes:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+    open System.Text
+    open System.IO
+
+    let image = "flowers-small.jpg" |> Picture.load |> Picture.toGrayscale
+    image 
+    |> Bayer.processLayer Bayer.bayer8x8 (Value.quantize 8)
+    |> Picture.fromGrayscale |> Picture.showOne "flowers"
+
+    let saveCharMatrix filename (matrix: char[,]) =
+        let height = matrix |> Matrix.heightOf
+        let sb = StringBuilder()
+        for y = 0 to height - 1 do
+            sb.Append(Matrix.extractRow matrix y).AppendLine() |> ignore
+        File.WriteAllText(filename |> Debug.fixPath, sb.ToString())
+
+    let asciiQuantize = 
+        let shades = [| '$'; 'B'; 'Q'; 'Y'; 'v'; '~'; '.'; ' ' |]
+        fun v -> shades.[(v |> max 0.0 |> min 1.0) * 7.0 |> round |> int]
+
+    image 
+    |> Bayer.processLayer Bayer.bayer8x8 asciiQuantize
+    |> saveCharMatrix "flowers.txt"
+
+---
+
+Bottom line is: it would be possible in C#, of course, but the question is would you do that?
+
+Did you see it comming?
 
 ***
 
@@ -1794,9 +1882,9 @@ The problem with Bayer is the fact that even if color was selected perfectly sur
     #load "init.fsx"
     open FsDither
 
-    "flowers-large.jpg"
+    "flowers-small.jpg"
     |> Picture.load
-    |> Picture.quickGrayscaleSlides [
+    |> Adhoc.quickGrayscaleSlides [
         "treshold2", Treshold.processLayer (Value.quantize 2)
         "bayer2", Bayer.processLayer Bayer.bayer8x8 (Value.quantize 2)
         "treshold256", Treshold.processLayer (Value.quantize 256)
@@ -1912,6 +2000,7 @@ Let's start with map/reduce for 3-item-tuple:
             let height = layers |> Triplet.map Matrix.heightOf |> Triplet.reduce min
             let inline combine y x = Pixel(red.[y, x], green.[y, x], blue.[y, x])
             Matrix.pinit height width combine
+
 ---
 
 Now we can apply Floyd-Steinberg to 3 channels:
@@ -1974,10 +2063,162 @@ Let's see:
     // map: 67.0074ms
     // pmap: 28.1844ms
 
----
+***
+
+### Parallel Floyd-Steinberg
+
+> For a number of years it was believed that this technique is inherently sequential and could not be parallelized.
+
+http://bit.ly/1JCyvC2
 
 ---
 
+> The Floyd-Steinberg method often gives excellent results, but it has drawbacks. In the first place, it is inherently serial method; the value of B[m, n] depends on all mn of the entries of A. -- **Donald E. Knuth, "Digital Halftones by Dot Diffusion", Stanford University**
+
+http://bit.ly/1z8XBlR
+
+---
+
+It can be partially parallelized because:
+
+![parallel diffusion](images/pfs-idea.png)
+
+---
+
+Two patches `x` and `y` can be processed in parallel:
+
+![parallel zoom](images/pfs-zoom.png)
+
+---
+
+And map of all patches looks like this:
+
+![parallel patches](images/pfs-patches.png)
+
+---
+
+The task is:
+
+- Implement patch sequence generation (`seq<seq<Patch>>`)
+- Implement Floyd-Steinberg for Patch
+- Run it (Seq.iter (Seq.piter processPatch))
+
+---
+
+Challenges:
+
+- More `IndexOutOfRange` checking than sequential
+- Error has to be stored and cumulated in output matrix
+- Parallelization overhead kills the benefits for small images
+
+---
+
+    [lang=fs]
+    module PFloydSteinberg =
+        let processLayer quantize input =
+            let (height, width) as size = input |> Matrix.sizeOf 
+            let output = Matrix.zeroCreate height width
+
+            size
+            |> enumeratePatches (128, 128)
+            |> Seq.iter (Seq.piter (processPatch quantize input output))
+
+            output
+
+(**Note**: refer to sources in GitHub for details)
+
+---
+
+Let's do some benchamarks:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let image = "college-huge.jpg" |> Picture.load 
+    let quant = Value.quantize 4
+    let sfloyd = FloydSteinberg.processLayer quant
+    let pfloyd = PFloydSteinberg.processLayer quant
+
+    image
+    |> Picture.toGrayscale
+    |> Debug.timeit "serial" sfloyd
+    |> Picture.fromGrayscale |> Picture.showOne "serial"
+    System.GC.Collect(2)
+
+    image
+    |> Picture.toGrayscale
+    |> Debug.timeit "parallel" pfloyd
+    |> Picture.fromGrayscale |> Picture.showOne "parallel"
+    System.GC.Collect(2)
+
+    // serial: 822.931ms
+    // parallel: 403.778ms
+
+(**Note**: not 4 times faster)
+
+***
+
+### Pint-Floyd-Steinberg
+
+---
+
+How much we can gain by using `int` instead of `float`?
+
+    [lang=fs]
+    module PintFloydSteinberg = 
+        // integer quantizer
+        let quantizerSteps = levels - 1
+        let quantizerStepWidth = (0x10000 / quantizerSteps) >>> 1
+        let inline quantize v = 
+            (((v + quantizerStepWidth) * quantizerSteps) &&& ~~~0xFFFF) / quantizerSteps 
+            |> max 0 |> min 0x10000
+
+        // integer diffusor
+        let inline diffuseError x error =
+            let error4 = error <<< 2
+            let inline div16round v = (v + 8) >>> 4
+            let inline diffuseDown x error = setcy1 x (error |> div16round)
+            diffuseDown (x - 1) (error4 - error)
+            diffuseDown x (error4 + error)
+            diffuseDown (x + 1) error
+            (error4 <<< 1) - error |> div16round
+
+---
+
+Let's see:
+
+    [lang=fs]
+    #load "init.fsx"
+    open FsDither
+
+    let image = "college-huge.jpg" |> Picture.load 
+    let quant = Value.quantize 4
+    let pfloyd = PFloydSteinberg.processLayer quant
+    let ifloyd = PintFloydSteinberg.processLayer 4
+
+    image
+    |> Picture.toGrayscale
+    |> Debug.timeit "float" pfloyd
+    |> Picture.fromGrayscale |> Picture.showOne "float"
+
+    System.GC.Collect(2)
+
+    image
+    |> Picture.toGrayscale
+    |> Matrix.pmap PintFloydSteinberg.fromFloat
+    |> Debug.timeit "integer" ifloyd
+    |> Matrix.pmap PintFloydSteinberg.toFloat
+    |> Picture.fromGrayscale |> Picture.showOne "integer"
+
+    System.GC.Collect(2)
+
+    // float: 421.629ms
+    // integer: 211.938ms
+
+***
+
+### Questions?
 
 ***
 
@@ -1990,6 +2231,56 @@ Let's see:
 ***
 
 # Really?
+
+***
+
+### Inherently SOLID
+
+- Single responsibility principle
+- Open/closed principle
+- Liskov substitution principle
+- Interface segregation principle
+- Dependency inversion principle
+
+---
+
+#### Single responsibility principle
+
+> a class should have only a single responsibility (i.e. only one potential change in the software's specification should be able to affect the specification of the class)
+
+**Answer**: Function
+
+---
+
+#### Open/closed principle
+
+> should be open for extension, but closed for modification.
+
+**Answer**: Function
+
+---
+
+#### Liskov substitution principle
+
+> objects in a program should be replaceable with instances of their subtypes without altering the correctness of that program.
+
+**Answer**: Composition over inheritance
+
+---
+
+#### Interface segregation principle
+
+> many client-specific interfaces are better than one general-purpose interface.
+
+**Answer**: Function
+
+---
+
+#### Dependency inversion principle
+
+> Depend upon abstractions. Do not depend upon concretions.
+
+**Answer**: Function
 
 ***
 
@@ -2078,66 +2369,5 @@ In F# we can use ad-hoc interface implementation:
         PrintSomeNumbers(adhoc)
 
 Used frequently with `IDisposable`
-
-***
-
-### Very SOLID
-
-- Single responsibility principle
-- Open/closed principle
-- Liskov substitution principle
-- Interface segregation principle
-- Dependency inversion principle
-
----
-
-#### Single responsibility principle
-
-> a class should have only a single responsibility (i.e. only one potential change in the software's specification should be able to affect the specification of the class)
-
-**Answer**: Function
-
----
-
-#### Open/closed principle
-
-> should be open for extension, but closed for modification.
-
-**Answer**: Function
-
----
-
-#### Liskov substitution principle
-
-> objects in a program should be replaceable with instances of their subtypes without altering the correctness of that program.
-
-**Answer**: Composition over inheritance
-
----
-
-#### Interface segregation principle
-
-> many client-specific interfaces are better than one general-purpose interface.
-
-**Answer**: Function
-
----
-
-#### Dependency inversion principle
-
-> Depend upon abstractions. Do not depend upon concretions.
-
-**Answer**: Function
-
-***
-
-Kevlin Henney - Seven Ineffective Coding Habits of Many Programmers
-https://vimeo.com/97329157
-
-***
-
-**Bayes' Rule in LaTeX**
-
-$ \Pr(A|B)=\frac{\Pr(B|A)\Pr(A)}{\Pr(B|A)\Pr(A)+\Pr(B|\neg A)\Pr(\neg A)} $
 
 ***

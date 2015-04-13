@@ -18,14 +18,8 @@ module Bitmap =
             graphics.DrawImage(image, 0, 0, width, height)
             bitmap
 
-    #if INTERACTIVE
-    let private fixPath path = System.IO.Path.Combine(__SOURCE_DIRECTORY__, path)
-    #else
-    let inline private fixPath path = path
-    #endif
-
     let load (fileName: string) = 
-        fileName |> fixPath |> Image.FromFile |> enforceFormat
+        fileName |> Debug.fixPath |> Image.FromFile |> enforceFormat
 
     let lockBits (lockMode: ImageLockMode) (func: BitmapData -> 'a) (bitmap: Bitmap) =
         let width, height = bitmap.Width, bitmap.Height

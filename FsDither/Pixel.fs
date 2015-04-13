@@ -6,13 +6,9 @@ module Value =
     let inline fromByte v = (v &&& 0xFF |> float) / 255.0
     let inline toByte v = (v |> min 1.0 |> max 0.0) * 255.0 |> round |> int
 
-    let quantize n = //!!!
+    let quantize n =
         let q = 1.0 / float (n - 1) 
         fun v -> round (v / q) * q |> max 0.0 |> min 1.0
-
-    let toAsciiHalftone = //!!!
-        let shades = [| '$'; 'B'; 'Q'; 'Y'; 'v'; '~'; '.'; ' ' |]
-        fun v -> shades.[(v |> max 0.0 |> min 1.0) * 7.0 |> round |> int]
 
 module Pixel =
     open Value

@@ -63,6 +63,7 @@
     <Compile Include="Picture.fs" />
     <Compile Include="Engine.fs" />
     <Compile Include="PintFloydSteinberg.fs" />
+    <Compile Include="Adhoc.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="david.jpg">

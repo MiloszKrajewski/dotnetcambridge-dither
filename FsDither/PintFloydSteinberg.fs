@@ -17,7 +17,8 @@ module PintFloydSteinberg =
         let quantizerSteps = levels - 1
         let quantizerStepWidth = (0x10000 / quantizerSteps) >>> 1
         let inline quantize v = 
-            (((v + quantizerStepWidth) * quantizerSteps) &&& ~~~0xFFFF) / quantizerSteps |> max 0 |> min 0x10000
+            (((v + quantizerStepWidth) * quantizerSteps) &&& ~~~0xFFFF) / quantizerSteps 
+            |> max 0 |> min 0x10000
 
         let inline update y x v = output.[y, x] <- output.[y, x] + v
         let inline lcapx x = x |> max 0

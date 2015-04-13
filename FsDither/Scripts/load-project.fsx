@@ -9,4 +9,5 @@
       @"..\Picture.fs"
       @"..\Engine.fs"
       @"..\PintFloydSteinberg.fs"
+      @"..\Adhoc.fs"
       @"..\Program.fs"
