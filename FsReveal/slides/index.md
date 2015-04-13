@@ -104,6 +104,12 @@ Free lunch is over
 
 ***
 
+### Intimidating syntax?
+
+> Hej, hvordan går det?
+
+***
+
 Once upon the time we were doing this:
 
     [lang=cs]
