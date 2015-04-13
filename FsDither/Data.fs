@@ -29,7 +29,7 @@ module Range =
     let inline fold func state (lo, hi) =
         // { lo..hi } |> Seq.fold func state
         let mutable s = state
-        for i = lo to hi do s <- func i s
+        for i = lo to hi do s <- func s i
         s
 
 module Matrix = // Array@d

@@ -1,6 +1,6 @@
 - title : Playing with Bayer, Floyd and Steinberg
 - description : F# by example: Playing with Bayer, Floyd and Steinberg
-- author : Milosz Krajewski (milosz.krajewski@gmail.com)
+- author : Milosz Krajewski
 - theme : beige
 - transition : default
 
@@ -15,7 +15,7 @@
 
 ---
 
-https://github.com/MiloszKrajewski/dotnetcambridge-dither
+[github.com/MiloszKrajewski/dotnetcambridge-dither](https://github.com/MiloszKrajewski/dotnetcambridge-dither)
 
 ***
 
@@ -48,17 +48,13 @@ https://github.com/MiloszKrajewski/dotnetcambridge-dither
 
 ***
 
-> A physicist and a mathematician setting in a faculty lounge. Suddenly, the coffee machine catches on fire. The physicist grabs a bucket and leaps towards the sink, fills the bucket with water and puts out the fire. The second day, the same two sit in the same lounge. Again, the coffee machine catches on fire. This time, the mathematician stands up, gets a bucket, hands the bucket to the physicist, thus reducing the problem to a previously solved one.
+> It is not about what is possible, it is about what is natural.
+
+(**Note**: they are all Turing complete anyway)
 
 ---
 
 > All generalizations are false, including this one. -- **Mark Twain**
-
----
-
-> It is not about what is possible, it is about what is natural.
-
-(**Note**: they are all Turing complete anyway)
 
 ***
 
@@ -77,7 +73,34 @@ https://github.com/MiloszKrajewski/dotnetcambridge-dither
 - Discriminated unions
 - Active patterns
 - Async
-- Monads
+- Monads (actually avoiding)
+
+***
+
+### Why functional languages are on the raise?
+
+---
+
+Free lunch is over
+
+![cpu speed](images/cpu-speed.png)
+
+---
+
+- Immutability and parallelization
+- Low ceremony, low noise, less code less bugs
+
+---
+
+[Simon Cousins - Does the Language You Use Make a Difference?](http://bit.ly/1oBHHh1)
+
+![LOC](images/sc-loc.png)
+
+---
+
+- Java - Scala
+- C# - F#
+- C++ - Rust (?)
 
 ***
 
@@ -96,10 +119,10 @@ Once upon the time we were doing this:
             var person = ParseCsvLine(line);
             result.Add(person);
         }
-        
+
         return person;
     }
-    
+
 (actually, there was no type inference)
 
 ---
@@ -113,10 +136,10 @@ But now we do it more like this:
         while ((line = reader.ReadLine()) != null)
             yield return line;
     }
-    
+
     public IEnumerable<Person> ParseCsvFile(string fileName)
     {
-        return 
+        return
             new StreamReader(fileName)
             .EnumerateLines()
             .Select(l => ParseCsvLine(l));
@@ -129,7 +152,7 @@ Just because it is much easier to make it parallel:
     [lang=cs]
     public IEnumerable<Person> ParseCsvFile(string fileName)
     {
-        return 
+        return
             new StreamReader(fileName)
             .EnumerateLines()
             .AsParallel()
@@ -143,12 +166,12 @@ or even more parallel:
     [lang=cs]
     public IEnumerable<Person> ParseCsvFiles(IEnumerable<string> fileNames)
     {
-        return 
+        return
             fileNames
             .AsParallel()
             .SelectMany(fn => ParseCsvFile(fn));
     }
-    
+
 ***
 
 If you like those features in C#:
@@ -188,19 +211,19 @@ F# is for you.
         private readonly Guid _id = Guid.NewGuid();
         private readonly string _name;
         private readonly int _age;
-        
+
         public Guid Id { get { return _id; } }
         public string Name { get { return _name; } }
         public int Age { get { return _age; } }
-        
+
         public PersonDTO(string name, int age)
         {
-            if (ReferenceEquals(name, null)) 
+            if (ReferenceEquals(name, null))
                 throw new ArgumentNullException("name");
             _name = name;
             _age = age;
         }
-        
+
         public override ToString()
         {
             return string.Format("PersonDTO(Name: \"{0}\", Age: {1})", _name, _age);
@@ -216,14 +239,14 @@ F# is for you.
     {
         public override Equal(object obj)
         {
-            if (ReferenceEquals(obj, this)) 
+            if (ReferenceEquals(obj, this))
                 return true;
             var other = obj as PersonDTO;
-            if (ReferenceEquals(other, null)) 
+            if (ReferenceEquals(other, null))
                 return false;
             return Name == other.Name && Age == other.Age;
         }
-        
+
         public override int GetHashCode()
         {
             return Name.GetHashCode() * 7 + Age.GetHashCode();
@@ -242,7 +265,7 @@ while in F# it would be:
         member x.Id = id
         member x.Name = name
         member x.Age = age
-        override x.ToString() = 
+        override x.ToString() =
             sprintf "Person(Name: \"%s\", Age: %d)" name age
 
 (**Note**: types? anyone for a bet?)
@@ -266,20 +289,20 @@ https://www.youtube.com/watch?v=grvvKURwGNg
 ---
 
 C# is generally left-to-right and top-down, but has islands of right-to-left'isms and bottom-up'isms:
-    
+
     [lang=cs]
     SendEmail(
         GenerateEmailFromTemplate(
             "YouHaveBeenSelectedTemplate",
-                GetPersonsEmailAddress( 
+                GetPersonsEmailAddress(
                     FindPersonById(id))));
-                    
+
 ---
 
 F# helps to sort this out using `|>` operator:
 
     [lang=fs]
-    id 
+    id
     |> findPersonById
     |> getPersonsEmailAddress
     |> generateEmailFromTemplate "YouHaveBeenSelectedTemplate"
@@ -339,18 +362,18 @@ It's like `var` but everywhere:
     [lang=fs]
     open System
 
-    /// retries given action; 
+    /// retries given action;
     /// returns its result or throws exception
     /// after `countLimit` failures or when `timeLimit` expires
     let retry countLimit timeLimit func arg =
         let timeLimit = DateTime.Now.Add(TimeSpan.FromSeconds(timeLimit))
         let rec retry count =
-            try 
-                func arg 
-            with 
-            | _ when (count <= countLimit && DateTime.Now <= timeLimit) -> 
+            try
+                func arg
+            with
+            | _ when (count <= countLimit && DateTime.Now <= timeLimit) ->
                 retry (count + 1)
-            | _ -> 
+            | _ ->
                 failwith "Operation failed"
         retry 0
 
@@ -565,7 +588,7 @@ C# alternative (`is` and `as`)
             throw new ArgumentException("No idea what to do", "subject");
         }
     }
-    
+
 **Problem**: double cast
 
 ---
@@ -591,7 +614,7 @@ C# alternative (`as` and `null`)
             throw new ArgumentException("No idea what to do", "subject");
         }
     }
-    
+
 **Problem**: wrong scope (too wide) and premature evaluation
 
 ---
@@ -610,7 +633,7 @@ C# alternative (`as` and `null`)
         else
         {
             var s = subject is string;
-            
+
             if (s != null)
             {
                 return s + " is a string";
@@ -621,7 +644,7 @@ C# alternative (`as` and `null`)
             }
         }
     }
-    
+
 **Problem**: else induced pyramid of doom
 
 ***
@@ -650,7 +673,7 @@ while in fact there is only one type:
     Func<T, U> func;
 
 or:
-    
+
     [lang=fs]
     func: 'a -> 'b
 
@@ -808,6 +831,18 @@ you produce new result and pass it forward
 
 ---
 
+Non-idiomatic English:
+
+Me like eat pizza.
+
+---
+
+Idiomatic English:
+
+> - I think it's a red herring. Do you know what red herring mean? - No. - It's like wild goose chase.
+
+---
+
 ### Idiomatic F#?
 
 - Separation of data and behaviour
@@ -930,16 +965,16 @@ is equivalent to:
 
     [lang=fs]
     X.iter (f: 'T -> unit) -> (x: X<'T>) -> unit
-    
+
 ![iter](images/iter.png)
 
 ---
 
     [lang=fs]
-    let countDown () = 
+    let countDown () =
         { 10..-1..0 }
         |> Seq.iter (printfn "%d")
-        
+
     // 10... 9... 8... 1... 0
     countDown ()
 
@@ -949,15 +984,15 @@ is equivalent to:
 
     [lang=fs]
     X.filter (f: 'T -> bool) -> (x: X<'T>) -> X<'T>
-    
+
 ![filter](images/filter.png)
 
 ---
 
     [lang=fs]
     let allNumbers = [ 1..10 ]
-    let evenNumbers = 
-        allNumbers 
+    let evenNumbers =
+        allNumbers
         |> List.filter (fun n -> n % 2 = 0)
 
     // all: [1; 2; 3; 4; 5; 6; 7; 8; 9; 10], even: [2; 4; 6; 8; 10]
@@ -1056,9 +1091,9 @@ Like `fold` as it has state, but also yields state on every item:
         type ViewerForm() as form =
             inherit Form(TopMost = true)
 
-            let viewer = 
+            let viewer =
                 new PictureBox(
-                    Dock = DockStyle.Fill, 
+                    Dock = DockStyle.Fill,
                     SizeMode = PictureBoxSizeMode.Zoom)
 
             do form.Controls.Add(viewer)
@@ -1070,7 +1105,7 @@ Like `fold` as it has state, but also yields state on every item:
     [lang=fs]
     module UI =
         type ViewerForm() as form =
-            member form.LoadImage (title, image) = 
+            member form.LoadImage (title, image) =
                 form.Text <- title
                 viewer.Image <- image
                 form.AdjustSize image.Size
@@ -1088,7 +1123,7 @@ Like `fold` as it has state, but also yields state on every item:
     module UI =
         type ViewerForm() as form =
             member private form.AdjustSize clientSize =
-                let inline sizeDiff (a: Size) (b: Size) = 
+                let inline sizeDiff (a: Size) (b: Size) =
                     Size(a.Width - b.Width, a.Height - b.Height)
                 let inline sizeRatios (a: Size) (b: Size) =
                     float a.Width / float b.Width, float a.Height / float b.Height
@@ -1104,7 +1139,7 @@ Like `fold` as it has state, but also yields state on every item:
                 let originY = (screenRect.Bottom - clientY - formMargin.Height) / 2
 
                 form.SetBounds(
-                    originX, originY, 
+                    originX, originY,
                     clientX + formMargin.Width, clientY + formMargin.Height)
 
 ---
@@ -1114,7 +1149,7 @@ Showing form in console application is a little bit different than in F# interac
     [lang=fs]
     module UI =
         #if CONSOLE
-        let private showForm factory = 
+        let private showForm factory =
             let action () = Application.Run(factory () :> Form)
             Thread(action, IsBackground = true).Start()
         #else
@@ -1162,7 +1197,7 @@ But the interface of UI module are actually these two methods: `showOne` and `sh
         let showMany (images: (string * #Image) seq) =
             let images = images.GetEnumerator()
             showViewer (fun form ->
-                let nextImage () = 
+                let nextImage () =
                     match images.MoveNext() with
                     | true -> images.Current |> form.LoadImage
                     | _ -> form.Close()
@@ -1217,7 +1252,7 @@ In F# interactive current folder is in Temp folder; we don't want to play with p
 
     [lang=fs]
     module Bitmap =
-        let load (fileName: string) = 
+        let load (fileName: string) =
             fileName |> Debug.fixPath |> Image.FromFile |> enforceFormat
 
 ---
@@ -1230,11 +1265,11 @@ In F# interactive current folder is in Temp folder; we don't want to play with p
 
     "lena.jpg" |> Bitmap.load |> UI.showOne "lena"
 
-    ["lena.jpg"; "david.jpg"] 
+    ["lena.jpg"; "david.jpg"]
     |> Seq.iter (fun fn -> fn |> Bitmap.load |> UI.showOne fn)
 
-    ["lena.jpg"; "david.jpg"] 
-    |> Seq.map (fun fn -> (fn, fn |> Bitmap.load)) 
+    ["lena.jpg"; "david.jpg"]
+    |> Seq.map (fun fn -> (fn, fn |> Bitmap.load))
     |> UI.showMany
 
 ---
@@ -1260,7 +1295,7 @@ For performance reason, we won't be using `GetPixel` on Bitmap, we will be using
 
     [lang=fs]
     module Bitmap =
-        let inline private physicalRowAddress line (data: BitmapData) = 
+        let inline private physicalRowAddress line (data: BitmapData) =
             data.Scan0 + nativeint (data.Stride * line)
 
         let getPhysicalPixels (data: BitmapData) row =
@@ -1359,7 +1394,7 @@ A `Value` representing color compound:
 
         let inline fromByte v = (v &&& 0xFF |> float) / 255.0
         let inline toByte v = (v |> min 1.0 |> max 0.0) * 255.0 |> round |> int
-        
+
 ---
 
 A bare `Pixel` struct:
@@ -1369,7 +1404,7 @@ A bare `Pixel` struct:
         open Value
 
         [<Struct>]
-        type Pixel = 
+        type Pixel =
             val r: Value
             val g: Value
             val b: Value
@@ -1408,12 +1443,12 @@ Conversion to and from grayscale and access to members as functions:
 
 ---
 
-As we would like to do as much as possible in parallel 
+As we would like to do as much as possible in parallel
 let's preemptively add parallel-iter (`piter`) to `Seq` module...
 
     [lang=fs]
     module Seq =
-        let inline piter func (s: 'a seq) = 
+        let inline piter func (s: 'a seq) =
             Parallel.ForEach(s, Action<'a>(func)) |> ignore
 
 ---
@@ -1424,7 +1459,7 @@ let's preemptively add parallel-iter (`piter`) to `Seq` module...
     module Range =
         type Range = (int * int)
 
-        let inline iter func (lo, hi) = 
+        let inline iter func (lo, hi) =
             // { lo..hi } |> Seq.iter func
             for i = lo to hi do func i
 
@@ -1435,7 +1470,7 @@ let's preemptively add parallel-iter (`piter`) to `Seq` module...
         let inline fold func state (lo, hi) =
             // { lo..hi } |> Seq.fold func state
             let mutable s = state
-            for i = lo to hi do s <- func i s
+            for i = lo to hi do s <- func s i
             s
 
 ***
@@ -1494,7 +1529,7 @@ Before we do some benchmarking let's define `timeit` operator:
     module Debug =
         open System.Diagnostics
 
-        let timeit name func arg = 
+        let timeit name func arg =
             let timer = Stopwatch.StartNew()
             let result = func arg
             timer.Stop()
@@ -1531,7 +1566,7 @@ Change laptop's power management profile :-)
     [lang=fs]
     module Matrix =
         let inline blitRowToVector (matrix: 'a[,]) row column (array: 'a[]) index length =
-            let inline clone i = array.[index + i] <- matrix.[row, column + i] 
+            let inline clone i = array.[index + i] <- matrix.[row, column + i]
             for i = 0 to length - 1 do clone i
 
         let inline blitVectorToRow (vector: 'a[]) index (matrix: 'a[,]) row column length =
@@ -1562,7 +1597,7 @@ Technically `Picture` is just `Pixel[,]`:
     open System.Drawing
     open System.Drawing.Imaging
 
-    module Picture = 
+    module Picture =
         open Value
         open Pixel
 
@@ -1572,7 +1607,7 @@ Technically `Picture` is just `Pixel[,]`:
             let width, height = bitmap.Width, bitmap.Height
             let matrix = Matrix.zeroCreate height width
 
-            let inline cloneRow data row = 
+            let inline cloneRow data row =
                 Bitmap.getPhysicalPixels data row
                 |> Array.map Pixel.fromInt32
                 |> Matrix.applyRow matrix row
@@ -1581,7 +1616,7 @@ Technically `Picture` is just `Pixel[,]`:
                 (0, height - 1) |> Range.piter (cloneRow data))
             matrix
 
-        let load fileName = 
+        let load fileName =
             fileName |> Bitmap.load |> fromBitmap
 
 ---
@@ -1602,12 +1637,12 @@ Let's inspect the type of result:
 To convert back to `Bitmap`:
 
     [lang=fs]
-    module Picture = 
+    module Picture =
         let toBitmap picture =
             let height, width = picture |> Matrix.sizeOf
             let bitmap = new Bitmap(width, height, Bitmap.bitmapFormat)
 
-            let inline cloneRow data row = 
+            let inline cloneRow data row =
                 Matrix.extractRow picture row
                 |> Array.map Pixel.toInt32
                 |> Bitmap.setPhysicalPixels data row
@@ -1635,8 +1670,8 @@ Let's check, if we can convert `Pixel[,]` to `Bitmap`:
 To avoid explicit calls to this conversion let's mirror `UI.showOne` and `UI.showMany`:
 
     [lang=fs]
-    module Picture = 
-        let showOne title picture = 
+    module Picture =
+        let showOne title picture =
             picture |> toBitmap |> UI.showOne title
 
         let showMany pictures =
@@ -1652,8 +1687,8 @@ We will need quantizer:
 
     [lang=fs]
     module Value =
-        let quantize n = 
-            let q = 1.0 / float (n - 1) 
+        let quantize n =
+            let q = 1.0 / float (n - 1)
             fun v -> round (v / q) * q |> max 0.0 |> min 1.0
 
 ---
@@ -1670,7 +1705,7 @@ We will be working mostly with grayscale images, so we need conversion:
 So, 'Treshold' processor has almost no implementation at all:
 
     [lang=fs]
-    module Treshold = 
+    module Treshold =
         let processLayer quantize layer =
             layer |> Matrix.pmap quantize
 
@@ -1685,10 +1720,10 @@ So, let's see:
     open FsDither
 
     "flowers-large.jpg"
-    |> Picture.load 
-    |> Picture.toGrayscale 
-    |> Treshold.processLayer (Value.quantize 2) 
-    |> Picture.fromGrayscale 
+    |> Picture.load
+    |> Picture.toGrayscale
+    |> Treshold.processLayer (Value.quantize 2)
+    |> Picture.fromGrayscale
     |> Picture.showOne "treshold"
 
 ---
@@ -1708,9 +1743,9 @@ So, let's see:
 
         for n = 2 to 16 do
             let title = sprintf "treshold: %d" n
-            let image = 
-                grayscale 
-                |> Treshold.processLayer (Value.quantize n) 
+            let image =
+                grayscale
+                |> Treshold.processLayer (Value.quantize n)
                 |> Picture.fromGrayscale
             yield title, image
     } |> Picture.showMany
@@ -1724,7 +1759,7 @@ So, let's see:
 Random dithering just adds random noise:
 
     [lang=fs]
-    module Random = 
+    module Random =
         open System
 
         let processLayer amplify quantize layer =
@@ -1742,10 +1777,10 @@ Random dithering just adds random noise:
     open FsDither
 
     "flowers-large.jpg"
-    |> Picture.load 
-    |> Picture.toGrayscale 
-    |> Random.processLayer 1.0 (Value.quantize 2) 
-    |> Picture.fromGrayscale 
+    |> Picture.load
+    |> Picture.toGrayscale
+    |> Random.processLayer 1.0 (Value.quantize 2)
+    |> Picture.fromGrayscale
     |> Picture.showOne "treshold"
 
 (**Note**: what it would be if `amplify` was set to 0.0?)
@@ -1762,7 +1797,7 @@ Bayer uses adjustment matrices:
 
     [lang=fs]
     module Bayer =
-        let private createMatrix m = 
+        let private createMatrix m =
             let m = m |> array2D
             let w, h = Matrix.sizeOf m
             let area = w * h
@@ -1771,7 +1806,7 @@ Bayer uses adjustment matrices:
         let bayer2x2 = [ [1; 3]; [4; 2] ] |> createMatrix
         let bayer3x3 = [ [3; 7; 4]; [6; 1; 9]; [2; 8; 5] ] |> createMatrix
         let bayer4x4 = [ [1; 9; 3; 11]; [13; 5; 15; 7]; [4; 12; 2; 10]; [16; 8; 14; 6] ] |> createMatrix
-        let bayer8x8 = 
+        let bayer8x8 =
             [
                 [1; 49; 13; 61; 4; 52; 16; 64]
                 [33; 17; 45; 29; 36; 20; 48; 32]
@@ -1780,7 +1815,7 @@ Bayer uses adjustment matrices:
                 [3; 51; 15; 63; 2; 50; 14; 62]
                 [35; 19; 47; 31; 34; 18; 46; 30]
                 [11; 59; 7; 55; 10; 58; 6; 54]
-                [43; 27; 39; 23; 42; 26; 38; 22] 
+                [43; 27; 39; 23; 42; 26; 38; 22]
             ] |> createMatrix
 
 ---
@@ -1843,7 +1878,7 @@ Here it comes:
     open System.IO
 
     let image = "flowers-small.jpg" |> Picture.load |> Picture.toGrayscale
-    image 
+    image
     |> Bayer.processLayer Bayer.bayer8x8 (Value.quantize 8)
     |> Picture.fromGrayscale |> Picture.showOne "flowers"
 
@@ -1854,11 +1889,11 @@ Here it comes:
             sb.Append(Matrix.extractRow matrix y).AppendLine() |> ignore
         File.WriteAllText(filename |> Debug.fixPath, sb.ToString())
 
-    let asciiQuantize = 
+    let asciiQuantize =
         let shades = [| '$'; 'B'; 'Q'; 'Y'; 'v'; '~'; '.'; ' ' |]
         fun v -> shades.[(v |> max 0.0 |> min 1.0) * 7.0 |> round |> int]
 
-    image 
+    image
     |> Bayer.processLayer Bayer.bayer8x8 asciiQuantize
     |> saveCharMatrix "flowers.txt"
 
@@ -1870,7 +1905,7 @@ Did you see it comming?
 
 ***
 
-Floyd-Steinberg
+### Floyd-Steinberg
 
 http://en.wikipedia.org/wiki/Floyd-Steinberg_dithering
 
@@ -1908,7 +1943,7 @@ The problem with Bayer is the fact that even if color was selected perfectly sur
             let output = Matrix.zeroCreate height width
             let yH = height - 1
 
-            let inline processRow y (cy0: Value[]) =
+            let inline processRow (cy0: Value[]) y =
                 // ...
 
             // let mutable cy = Array.zeroCreate (width + 2)
@@ -1930,7 +1965,7 @@ The problem with Bayer is the fact that even if color was selected perfectly sur
                 let cy1 = Array.zeroCreate (width + 2)
                 let xW = width - 1
 
-                let inline calculateValue x c = 
+                let inline calculateValue x c =
                     let expected = input.[y, x] + cy0.[x + 1] + c
                     let actual = quantize expected
                     output.[y, x] <- actual
@@ -1938,18 +1973,18 @@ The problem with Bayer is the fact that even if color was selected perfectly sur
 
                 let inline diffuseError x error =
                     let error' = error / 16.0
-                    let inline diffuseDown x error ratio = 
+                    let inline diffuseDown x error ratio =
                         cy1.[x + 1] <- cy1.[x + 1] + error * ratio
                     diffuseDown (x - 1) error' 3.0
                     diffuseDown x error' 5.0
                     diffuseDown (x + 1) error' 1.0
                     error' * 7.0
 
-                let inline processPixel x c = 
+                let inline processPixel c x =
                     c |> calculateValue x |> diffuseError x
 
                 // let mutable c = 0.0
-                // for x = 0 to xW do c <- processPixel x c
+                // for x = 0 to xW do c <- processPixel c x
                 (0, xW) |> Range.fold processPixel 0.0 |> ignore
 
                 cy1
@@ -1965,9 +2000,9 @@ The effect?
 
     let quantize = Value.quantize 2
 
-    "flowers-large.jpg" 
+    "flowers-large.jpg"
     |> Picture.load
-    |> Picture.quickGrayscaleSlides [
+    |> Adhoc.quickGrayscaleSlides [
         "none", id
         "treshold", Treshold.processLayer quantize
         "random", Random.processLayer 1.0 quantize
@@ -1990,9 +2025,9 @@ Let's start with map/reduce for 3-item-tuple:
 ---
 
     [lang=fs]
-    module Picture = 
+    module Picture =
         let split (picture: Pixel[,]) =
-            (Pixel.getR, Pixel.getG, Pixel.getB) 
+            (Pixel.getR, Pixel.getG, Pixel.getB)
             |> Triplet.map (fun f -> Matrix.pmap f picture)
 
         let join ((red: Value[,], green: Value[,], blue: Value[,]) as layers) =
@@ -2009,14 +2044,14 @@ Now we can apply Floyd-Steinberg to 3 channels:
     #load "init.fsx"
     open FsDither
 
-    let image = "flowers-large.jpg" |> Picture.load 
+    let image = "flowers-large.jpg" |> Picture.load
     let quant = Value.quantize 4
     let floyd = FloydSteinberg.processLayer quant
 
     image
-    |> Picture.toGrayscale 
+    |> Picture.toGrayscale
     |> floyd
-    |> Picture.fromGrayscale 
+    |> Picture.fromGrayscale
     |> Picture.showOne "grayscale4"
 
     image
@@ -2032,8 +2067,8 @@ Floyd-Steinberg is not parallel algorithm, but at least we can apply it to 3 cha
     [lang=fs]
     module Triplet =
         let inline pmap f (a, b, c) =
-            match [|a; b; c|] |> Array.Parallel.map f with 
-            | [|a; b; c|] -> (a, b, c) 
+            match [|a; b; c|] |> Array.Parallel.map f with
+            | [|a; b; c|] -> (a, b, c)
             | _ -> failwith "Not going to happen"
 
 ---
@@ -2044,7 +2079,7 @@ Let's see:
     #load "init.fsx"
     open FsDither
 
-    let image = "flowers-large.jpg" |> Picture.load 
+    let image = "flowers-large.jpg" |> Picture.load
     let quant = Value.quantize 4
     let floyd = FloydSteinberg.processLayer quant
 
@@ -2116,7 +2151,7 @@ Challenges:
     [lang=fs]
     module PFloydSteinberg =
         let processLayer quantize input =
-            let (height, width) as size = input |> Matrix.sizeOf 
+            let (height, width) as size = input |> Matrix.sizeOf
             let output = Matrix.zeroCreate height width
 
             size
@@ -2135,7 +2170,7 @@ Let's do some benchamarks:
     #load "init.fsx"
     open FsDither
 
-    let image = "college-huge.jpg" |> Picture.load 
+    let image = "college-huge.jpg" |> Picture.load
     let quant = Value.quantize 4
     let sfloyd = FloydSteinberg.processLayer quant
     let pfloyd = PFloydSteinberg.processLayer quant
@@ -2157,6 +2192,22 @@ Let's do some benchamarks:
 
 (**Note**: not 4 times faster)
 
+---
+
+Matrix multiplication:
+
+- Naive: $O(n^3)$
+- Strassen: $O(n^{2.8074})$
+- Coppersmith–Winograd: $O(n^{2.375477})$
+
+(actually, it was tweaked multiple times and currently is $O(n^{2.3728639})$)
+
+---
+
+Although:
+
+> [...] unlike the Strassen algorithm, it is not used in practice because it only provides an advantage for matrices so large that they cannot be processed by modern hardware. -- **Wikipedia on Coppersmith–Winograd**
+
 ***
 
 ### Pint-Floyd-Steinberg
@@ -2166,12 +2217,12 @@ Let's do some benchamarks:
 How much we can gain by using `int` instead of `float`?
 
     [lang=fs]
-    module PintFloydSteinberg = 
+    module PintFloydSteinberg =
         // integer quantizer
         let quantizerSteps = levels - 1
         let quantizerStepWidth = (0x10000 / quantizerSteps) >>> 1
-        let inline quantize v = 
-            (((v + quantizerStepWidth) * quantizerSteps) &&& ~~~0xFFFF) / quantizerSteps 
+        let inline quantize v =
+            (((v + quantizerStepWidth) * quantizerSteps) &&& ~~~0xFFFF) / quantizerSteps
             |> max 0 |> min 0x10000
 
         // integer diffusor
@@ -2192,7 +2243,7 @@ Let's see:
     #load "init.fsx"
     open FsDither
 
-    let image = "college-huge.jpg" |> Picture.load 
+    let image = "college-huge.jpg" |> Picture.load
     let quant = Value.quantize 4
     let pfloyd = PFloydSteinberg.processLayer quant
     let ifloyd = PintFloydSteinberg.processLayer 4
@@ -2343,7 +2394,7 @@ and some code which utilizes it:
 Let's say somewhere in the application we need to call `PrintSomeNumbers` with some random numbers:
 
     [lang=cs]
-    public class RandomDoubleFactory : IFactory<double>
+    public class RandomDoubleFactory: IFactory<double>
     {
         private Random _generator = new Random();
 

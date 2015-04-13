@@ -48,7 +48,7 @@ module FloydSteinberg =
         let output = Matrix.zeroCreate height width
         let yH = height - 1
 
-        let inline processRow y (cy0: Value[]) =
+        let inline processRow (cy0: Value[]) y =
             let cy1 = Array.zeroCreate (width + 2)
             let xW = width - 1
 
@@ -67,7 +67,7 @@ module FloydSteinberg =
                 diffuseDown (x + 1) error' 1.0
                 error' * 7.0
 
-            let inline processPixel x c = 
+            let inline processPixel c x = 
                 c |> calculateValue x |> diffuseError x
 
             (0, xW) |> Range.fold processPixel 0.0 |> ignore
@@ -149,7 +149,7 @@ module PFloydSteinberg =
                 diffuseDown (x + 1) 1.0
                 error' * 7.0
 
-            let inline processPixel x c = c |> calculateValue x |> diffuseError x
+            let inline processPixel c x = c |> calculateValue x |> diffuseError x
 
             let x0 = xC - r
             let xW = xC + w - r - 1
